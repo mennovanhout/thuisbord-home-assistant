@@ -23,6 +23,10 @@
           }
         }
       },
+      "consent": {
+        "title": "Key works, no consent yet",
+        "description": "Thuisbord knows this key, but you have not yet said which values Thuisbord may receive. In the Thuisbord app, tap **I agree**, then click Submit here."
+      },
       "mode": {
         "title": "How do the readings reach Thuisbord?",
         "description": "The key works. Choose how Home Assistant sends readings.",
@@ -136,7 +140,8 @@
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ for gas."
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ for gas.",
+      "consent_still_missing": "No consent in the Thuisbord app yet. Tap I agree there and try again."
     },
     "abort": {
       "already_configured": "This household is already connected.",

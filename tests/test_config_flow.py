@@ -127,8 +127,6 @@ async def test_action(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) 
     [
         ({"status": 401, "json": {"code": "unauthenticated"}}, "invalid_key"),
         ({"status": 403, "json": {"code": "key_revoked"}}, "key_revoked"),
-        ({"status": 403, "json": {"code": "consent_not_recorded"}}, "consent_not_recorded"),
-        ({"json": {**CONNECTION_OK, "consent_given": False}}, "consent_not_recorded"),
         ({"status": 403, "json": {"code": "token_not_allowed"}}, "token_not_allowed"),
         ({"status": 403, "text": "not json"}, "key_refused"),
         ({"status": 429, "json": {"code": "too_many_requests"}}, "too_many_requests"),
@@ -155,6 +153,64 @@ async def test_key_refused_then_fixed(
     aioclient_mock.get(CONNECTION_URL, json=CONNECTION_OK)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {CONF_CONNECTION_KEY: KEY, **ADVANCED}
+    )
+    assert result["type"] is FlowResultType.MENU
+
+
+@pytest.mark.parametrize(
+    "not_yet",
+    [
+        {"json": {**CONNECTION_OK, "consent_given": False}},
+        {"status": 403, "json": {"code": "consent_not_recorded"}},
+    ],
+)
+async def test_waits_for_consent(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, not_yet: dict[str, Any]
+) -> None:
+    """A valid key without consent is not an error: the flow waits until the household agrees."""
+    aioclient_mock.get(CONNECTION_URL, **not_yet)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_CONNECTION_KEY: KEY, **ADVANCED}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "consent"
+    assert result["errors"] == {}
+
+    # Submit before agreeing in the app: still waiting.
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["step_id"] == "consent"
+    assert result["errors"] == {"base": "consent_still_missing"}
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(CONNECTION_URL, json={**CONNECTION_OK, "consent_given": True})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "mode"
+
+
+async def test_key_renewed_while_waiting_for_consent(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """When the key is renewed while waiting, the key form comes back with the reason."""
+    aioclient_mock.get(CONNECTION_URL, json={**CONNECTION_OK, "consent_given": False})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_CONNECTION_KEY: KEY, **ADVANCED}
+    )
+    assert result["step_id"] == "consent"
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(CONNECTION_URL, status=403, json={"code": "key_revoked"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "user"
+    assert result["errors"] == {"base": "key_revoked"}
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(CONNECTION_URL, json=CONNECTION_OK)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_CONNECTION_KEY: OTHER_KEY, **ADVANCED}
     )
     assert result["type"] is FlowResultType.MENU
 
@@ -295,18 +351,28 @@ async def test_reauth(
     assert aioclient_mock.mock_calls[0][3]["Authorization"] == f"Bearer {OTHER_KEY}"
 
 
-async def test_reauth_still_refused(
+async def test_reauth_waits_for_consent(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, sensors_entry: MockConfigEntry
 ) -> None:
-    """Consent still missing keeps the form open with that reason."""
-    aioclient_mock.get(CONNECTION_URL, status=403, json={"code": "consent_not_recorded"})
-    result = await sensors_entry.start_reauth_flow(hass)
-    assert result["errors"] == {}
+    """After reconnecting in the app, the key works once the household agrees again."""
+    aioclient_mock.get(CONNECTION_URL, json={**CONNECTION_OK, "consent_given": False})
+    result = await sensors_entry.start_reauth_flow(
+        hass, data={"refusal_code": "consent_not_recorded"}
+    )
+    assert result["errors"] == {"base": "consent_not_recorded"}
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {CONF_CONNECTION_KEY: KEY}
+        result["flow_id"], {CONF_CONNECTION_KEY: OTHER_KEY}
     )
     assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": "consent_not_recorded"}
+    assert result["step_id"] == "consent"
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(CONNECTION_URL, json={**CONNECTION_OK, "consent_given": True})
+    with patch("custom_components.thuisbord.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert sensors_entry.data[CONF_CONNECTION_KEY] == OTHER_KEY
 
 
 async def test_reauth_other_household(

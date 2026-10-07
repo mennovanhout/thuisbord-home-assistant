@@ -96,6 +96,9 @@ REFUSAL_ERRORS: Final = {
     "token_not_allowed": "token_not_allowed",
 }
 
+# Not an error: the key is valid, but the household has not agreed in the app yet.
+CONSENT_PENDING: Final = "consent_pending"
+
 # Addresses on a home network: RFC 1918, link-local and IPv6 unique local addresses.
 HOME_NETWORKS: Final = tuple(
     ipaddress.ip_network(network)
@@ -152,7 +155,11 @@ def check_api_url(url: str) -> str | None:
 
 
 async def async_check_key(hass: HomeAssistant, api_url: str, key: str) -> str | None:
-    """Check the key with Thuisbord. Return an error key, or None when Thuisbord accepts it."""
+    """Check the key with Thuisbord.
+
+    Return None when Thuisbord takes readings with it, CONSENT_PENDING when the key is valid but
+    the household has not agreed in the app yet, or an error key.
+    """
     integration = await async_get_integration(hass, DOMAIN)
     api = ThuisbordApi(
         async_get_clientsession(hass),
@@ -163,6 +170,8 @@ async def async_check_key(hass: HomeAssistant, api_url: str, key: str) -> str | 
     try:
         info = await api.check_connection()
     except KeyRefused as err:
+        if err.code == "consent_not_recorded":
+            return CONSENT_PENDING
         return REFUSAL_ERRORS.get(err.code, "key_refused")
     except TooManyRequests:
         return "too_many_requests"
@@ -171,7 +180,7 @@ async def async_check_key(hass: HomeAssistant, api_url: str, key: str) -> str | 
     except CannotConnect:
         return "cannot_connect"
     if not info.consent_given:
-        return "consent_not_recorded"
+        return CONSENT_PENDING
     return None
 
 
@@ -295,6 +304,9 @@ class ThuisbordConfigFlow(ConfigFlow, domain=DOMAIN):
         """Start without a key."""
         self._data: dict[str, Any] = {}
         self._refusal_code: str | None = None
+        self._awaiting_consent = False
+        # A refusal found while waiting for consent, shown on the key form it returns to.
+        self._key_error: str | None = None
 
     @staticmethod
     @callback
@@ -320,10 +332,58 @@ class ThuisbordConfigFlow(ConfigFlow, domain=DOMAIN):
         else:
             self._abort_if_unique_id_configured()
 
-        if (error := await async_check_key(self.hass, api_url, key)) is not None:
+        error = await async_check_key(self.hass, api_url, key)
+        if error not in (None, CONSENT_PENDING):
             return {"base": error}
         self._data = {CONF_CONNECTION_KEY: key, CONF_API_URL: api_url.rstrip("/")}
+        self._awaiting_consent = error == CONSENT_PENDING
         return {}
+
+    async def _async_key_accepted(self) -> ConfigFlowResult:
+        """Go on once Thuisbord accepts the key: wait for consent first when it is missing."""
+        if self._awaiting_consent:
+            return await self.async_step_consent()
+        if self.source == SOURCE_REAUTH:
+            return self.async_update_reload_and_abort(
+                self._get_reauth_entry(),
+                data_updates={CONF_CONNECTION_KEY: self._data[CONF_CONNECTION_KEY]},
+            )
+        if self.source == SOURCE_RECONFIGURE:
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(), data_updates=self._data
+            )
+        return await self.async_step_mode()
+
+    async def async_step_consent(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The key works, but the household has not agreed yet. Check again on Submit."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            error = await async_check_key(
+                self.hass, self._data[CONF_API_URL], self._data[CONF_CONNECTION_KEY]
+            )
+            if error is None:
+                self._awaiting_consent = False
+                return await self._async_key_accepted()
+            if error != CONSENT_PENDING:
+                # The key itself is refused now, for example because it was renewed: ask for it.
+                self._awaiting_consent = False
+                self._key_error = error
+                if self.source == SOURCE_REAUTH:
+                    return await self.async_step_reauth_confirm()
+                if self.source == SOURCE_RECONFIGURE:
+                    return await self.async_step_reconfigure()
+                return await self.async_step_user()
+            errors["base"] = "consent_still_missing"
+        return self.async_show_form(step_id="consent", data_schema=vol.Schema({}), errors=errors)
+
+    def _shown_errors(self, errors: dict[str, str]) -> dict[str, str]:
+        """The form's errors, or the refusal found while waiting for consent."""
+        if not errors and self._key_error is not None:
+            errors = {"base": self._key_error}
+            self._key_error = None
+        return errors
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -334,13 +394,13 @@ class ThuisbordConfigFlow(ConfigFlow, domain=DOMAIN):
             api_url = (user_input.get(SECTION_ADVANCED) or {}).get(CONF_API_URL, DEFAULT_API_URL)
             errors = await self._async_validate_key(user_input, api_url.strip())
             if not errors:
-                return await self.async_step_mode()
+                return await self._async_key_accepted()
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(
                 _key_schema(with_server=True), user_input or {}
             ),
-            errors=errors,
+            errors=self._shown_errors(errors),
             description_placeholders={"default_url": DEFAULT_API_URL},
         )
 
@@ -405,16 +465,15 @@ class ThuisbordConfigFlow(ConfigFlow, domain=DOMAIN):
                 user_input, entry.data.get(CONF_API_URL, DEFAULT_API_URL)
             )
             if not errors:
-                return self.async_update_reload_and_abort(
-                    entry, data_updates={CONF_CONNECTION_KEY: self._data[CONF_CONNECTION_KEY]}
-                )
+                return await self._async_key_accepted()
         elif self._refusal_code is not None:
             # Show at once why Thuisbord stopped taking readings.
             errors = {"base": REFUSAL_ERRORS.get(self._refusal_code, "key_refused")}
+            self._refusal_code = None
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=_key_schema(with_server=False),
-            errors=errors,
+            errors=self._shown_errors(errors),
         )
 
     async def async_step_reconfigure(
@@ -429,7 +488,7 @@ class ThuisbordConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             errors = await self._async_validate_key(user_input, api_url.strip())
             if not errors:
-                return self.async_update_reload_and_abort(entry, data_updates=self._data)
+                return await self._async_key_accepted()
         suggested = {
             SECTION_ADVANCED: {CONF_API_URL: entry.data.get(CONF_API_URL, DEFAULT_API_URL)}
         }
@@ -438,7 +497,7 @@ class ThuisbordConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=self.add_suggested_values_to_schema(
                 _key_schema(with_server=True), suggested
             ),
-            errors=errors,
+            errors=self._shown_errors(errors),
             description_placeholders={"default_url": DEFAULT_API_URL},
         )
 

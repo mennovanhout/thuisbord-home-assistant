@@ -23,6 +23,10 @@
           }
         }
       },
+      "consent": {
+        "title": "Sleutel werkt, nog geen toestemming",
+        "description": "Thuisbord kent deze sleutel, maar jullie hebben nog niet gezegd welke waarden Thuisbord mag ontvangen. Tik in de Thuisbord-app op **Ik ga akkoord** en klik daarna hier op Verzenden."
+      },
       "mode": {
         "title": "Hoe gaan de meterstanden naar Thuisbord?",
         "description": "De sleutel werkt. Kies hoe Home Assistant meterstanden stuurt.",
@@ -136,7 +140,8 @@
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ voor gas."
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ voor gas.",
+      "consent_still_missing": "Nog geen toestemming in de Thuisbord-app. Tik daar op Ik ga akkoord en probeer het opnieuw."
     },
     "abort": {
       "already_configured": "Dit huishouden is al gekoppeld.",
