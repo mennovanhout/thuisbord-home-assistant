@@ -128,6 +128,7 @@ async def test_action(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) 
         ({"status": 401, "json": {"code": "unauthenticated"}}, "invalid_key"),
         ({"status": 403, "json": {"code": "key_revoked"}}, "key_revoked"),
         ({"status": 403, "json": {"code": "consent_not_recorded"}}, "consent_not_recorded"),
+        ({"json": {**CONNECTION_OK, "consent_given": False}}, "consent_not_recorded"),
         ({"status": 403, "json": {"code": "token_not_allowed"}}, "token_not_allowed"),
         ({"status": 403, "text": "not json"}, "key_refused"),
         ({"status": 429, "json": {"code": "too_many_requests"}}, "too_many_requests"),

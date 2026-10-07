@@ -61,6 +61,9 @@ class ConnectionInfo:
 
     max_readings: int = MAX_READINGS
     min_interval_seconds: int = MIN_INTERVAL_SECONDS
+    # False when the key is valid but the household has not agreed yet, so readings would be
+    # refused with `consent_not_recorded`. Absent means the back-end refuses such a key itself.
+    consent_given: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +132,7 @@ class ThuisbordApi:
                 min_interval_seconds=_positive_int(
                     body.get("min_interval_seconds"), MIN_INTERVAL_SECONDS
                 ),
+                consent_given=body.get("consent_given") is not False,
             )
         if status in (401, 403):
             raise KeyRefused(status, refusal_code(status, body))

@@ -161,7 +161,7 @@ async def async_check_key(hass: HomeAssistant, api_url: str, key: str) -> str | 
         f"Thuisbord-HomeAssistant/{integration.version}",
     )
     try:
-        await api.check_connection()
+        info = await api.check_connection()
     except KeyRefused as err:
         return REFUSAL_ERRORS.get(err.code, "key_refused")
     except TooManyRequests:
@@ -170,6 +170,8 @@ async def async_check_key(hass: HomeAssistant, api_url: str, key: str) -> str | 
         return "unexpected_response"
     except CannotConnect:
         return "cannot_connect"
+    if not info.consent_given:
+        return "consent_not_recorded"
     return None
 
 
