@@ -1,0 +1,22 @@
+{
+  "entity": {
+    "sensor": {
+      "status": {
+        "default": "mdi:transmission-tower-export",
+        "state": {
+          "retrying": "mdi:cloud-refresh-variant",
+          "refused": "mdi:alert-circle-outline",
+          "stopped": "mdi:key-alert-outline"
+        }
+      },
+      "last_sent": {
+        "default": "mdi:clock-check-outline"
+      }
+    }
+  },
+  "services": {
+    "send_reading": {
+      "service": "mdi:transmission-tower-export"
+    }
+  }
+}

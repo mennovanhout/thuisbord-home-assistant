@@ -1,0 +1,76 @@
+# Names and descriptions are in translations/en.json and translations/nl.json.
+send_reading:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: thuisbord
+    active_power_w:
+      required: true
+      example: 840
+      selector:
+        number:
+          min: -60000
+          max: 60000
+          step: 1
+          unit_of_measurement: W
+          mode: box
+    totals:
+      collapsed: true
+      fields:
+        import_t1_kwh:
+          example: "4183.102"
+          selector: &total_kwh
+            number:
+              min: 0
+              max: 999999.999
+              step: 0.001
+              unit_of_measurement: kWh
+              mode: box
+        import_t2_kwh:
+          example: "3921.950"
+          selector: *total_kwh
+        export_t1_kwh:
+          example: "1022.301"
+          selector: *total_kwh
+        export_t2_kwh:
+          example: "2412.660"
+          selector: *total_kwh
+        import_total_kwh:
+          example: "8105.052"
+          selector: *total_kwh
+        export_total_kwh:
+          example: "3434.961"
+          selector: *total_kwh
+        active_tariff:
+          example: 1
+          selector:
+            select:
+              options:
+                - "1"
+                - "2"
+    extra:
+      collapsed: true
+      fields:
+        solar_power_w:
+          example: 3400
+          selector:
+            number:
+              min: 0
+              max: 60000
+              step: 1
+              unit_of_measurement: W
+              mode: box
+        solar_total_kwh:
+          example: "9875.210"
+          selector: *total_kwh
+        gas_total_m3:
+          example: "2911.408"
+          selector:
+            number:
+              min: 0
+              max: 999999.999
+              step: 0.001
+              unit_of_measurement: m³
+              mode: box

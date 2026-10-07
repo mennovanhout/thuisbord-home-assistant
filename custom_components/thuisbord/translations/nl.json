@@ -1,0 +1,343 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Thuisbord koppelen",
+        "description": "Deze integratie stuurt de meterstanden van jullie slimme meter naar Thuisbord, zodat elk scherm in huis ze laat zien. Ze leest alleen de sensoren die je kiest en bedient geen apparaten.\n\nJe vindt de sleutel in de Thuisbord-app: Instellingen › Meterkoppeling › Meter koppelen › Home Assistant. Tik bij Jullie koppelsleutel op Kopiëren en plak hem hier.",
+        "data": {
+          "connection_key": "Koppelsleutel"
+        },
+        "data_description": {
+          "connection_key": "Begint met thb_. Home Assistant bewaart de sleutel alleen in deze integratie en zet hem nooit in het logboek."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Geavanceerd",
+            "description": "Alleen nodig om met een eigen Thuisbord-server te testen.",
+            "data": {
+              "api_url": "Serveradres"
+            },
+            "data_description": {
+              "api_url": "Laat dit op {default_url} staan."
+            }
+          }
+        }
+      },
+      "mode": {
+        "title": "Hoe gaan de meterstanden naar Thuisbord?",
+        "description": "De sleutel werkt. Kies hoe Home Assistant meterstanden stuurt.",
+        "menu_options": {
+          "sensors": "Ik kies mijn sensoren, Thuisbord leest ze zelf",
+          "action": "Ik maak zelf een automatisering met de actie"
+        }
+      },
+      "sensors": {
+        "title": "Kies jullie sensoren",
+        "description": "Alleen vermogen is nodig. Kies verder alleen wat jullie meter geeft; Thuisbord stuurt hooguit elke 10 seconden een meting, en alleen de waarden die je hier kiest.",
+        "sections": {
+          "power_section": {
+            "name": "Vermogen (nodig)",
+            "description": "Kies één netto-vermogenssensor, of een afname- én een terugleveringssensor. W en kW worden allebei herkend.",
+            "data": {
+              "power": "Netto vermogen",
+              "power_import": "Vermogen afname",
+              "power_export": "Vermogen teruglevering"
+            },
+            "data_description": {
+              "power": "Positief bij afname, negatief bij teruglevering, zoals bij HomeWizard. Gekozen? Dan blijven de twee velden hieronder leeg.",
+              "power_import": "Wat jullie nu van het net halen, altijd positief, zoals DSMR Power consumption.",
+              "power_export": "Wat jullie nu aan het net leveren, als positief getal, zoals DSMR Power production."
+            }
+          },
+          "totals_section": {
+            "name": "Meterstanden en tarief (optioneel)",
+            "description": "Tarief 1 en tarief 2 gaan samen: kies ze allebei of geen van beide. Zonder meterstanden rekent Thuisbord jullie verbruik uit het vermogen; zonder tarief gebruikt Thuisbord jullie daluren. Wh, kWh en MWh worden allemaal herkend.",
+            "data": {
+              "import_total": "Afname totaal",
+              "import_t1": "Afname tarief 1",
+              "import_t2": "Afname tarief 2",
+              "export_total": "Teruglevering totaal",
+              "export_t1": "Teruglevering tarief 1",
+              "export_t2": "Teruglevering tarief 2",
+              "active_tariff": "Actief tarief"
+            },
+            "data_description": {
+              "import_total": "Afname van beide tarieven samen, voor een meter die geen standen per tarief geeft.",
+              "import_t1": "Meestal het daltarief.",
+              "import_t2": "Meestal het normale tarief.",
+              "export_total": "Teruglevering van beide tarieven samen.",
+              "active_tariff": "Een sensor met 1 of 2, of low of normal, zoals DSMR."
+            }
+          },
+          "extra_section": {
+            "name": "Zonnepanelen en gas (optioneel)",
+            "description": "Niet gekozen of tijdelijk onbekend? Dan blijft het veld weg uit de meting.",
+            "data": {
+              "solar_power": "Zonnestroom nu",
+              "solar_total": "Zonnestroom totaal",
+              "gas_total": "Gasmeterstand"
+            },
+            "data_description": {
+              "solar_power": "W of kW. Een negatieve waarde wordt 0.",
+              "gas_total": "In m³."
+            }
+          }
+        }
+      },
+      "action": {
+        "title": "Zelf een automatisering maken",
+        "description": "Home Assistant leest dan zelf geen sensoren. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom en gas. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen."
+      },
+      "reauth_confirm": {
+        "title": "Nieuwe koppelsleutel nodig",
+        "description": "Thuisbord neemt geen meterstanden meer aan met de opgeslagen sleutel. Kopieer de sleutel in de Thuisbord-app (Instellingen › Meterkoppeling › Meter koppelen › Home Assistant) en plak hem hier.",
+        "data": {
+          "connection_key": "Koppelsleutel"
+        },
+        "data_description": {
+          "connection_key": "Begint met thb_."
+        }
+      },
+      "reconfigure": {
+        "title": "Koppelsleutel wijzigen",
+        "description": "Plak de sleutel die de Thuisbord-app nu laat zien.",
+        "data": {
+          "connection_key": "Koppelsleutel"
+        },
+        "data_description": {
+          "connection_key": "Begint met thb_."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Geavanceerd",
+            "description": "Alleen nodig om met een eigen Thuisbord-server te testen.",
+            "data": {
+              "api_url": "Serveradres"
+            },
+            "data_description": {
+              "api_url": "Laat dit op {default_url} staan."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_key_format": "Dit is geen koppelsleutel van Thuisbord: die begint met thb_ en is lang. Kopieer de hele sleutel opnieuw in de Thuisbord-app.",
+      "invalid_url": "Dit serveradres klopt niet. Gebruik {default_url}.",
+      "insecure_url": "Het serveradres moet met https:// beginnen, want de sleutel gaat ernaartoe. Alleen een server in huis of op deze computer mag http:// gebruiken.",
+      "invalid_key": "Thuisbord kent deze koppelsleutel niet. Kopieer de sleutel opnieuw in de Thuisbord-app.",
+      "key_revoked": "In de Thuisbord-app is een nieuwe sleutel gemaakt. Plak de nieuwe sleutel.",
+      "consent_not_recorded": "Jullie hebben nog geen toestemming gegeven. Tik in de Thuisbord-app op Ik ga akkoord en plak de sleutel daarna opnieuw.",
+      "token_not_allowed": "Dit is een andere sleutel dan de koppelsleutel. Gebruik de sleutel bij Jullie koppelsleutel in de Thuisbord-app.",
+      "key_refused": "Thuisbord weigert deze sleutel. Kopieer de sleutel opnieuw in de Thuisbord-app.",
+      "too_many_requests": "Thuisbord vraagt even te wachten. Probeer het over een minuut opnieuw.",
+      "unexpected_response": "Thuisbord gaf een antwoord dat deze integratie niet kent. Werk de integratie bij via HACS.",
+      "cannot_connect": "Thuisbord is niet bereikbaar. Controleer de internetverbinding van Home Assistant en probeer het opnieuw.",
+      "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
+      "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
+      "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ voor gas."
+    },
+    "abort": {
+      "already_configured": "Dit huishouden is al gekoppeld.",
+      "wrong_household": "Deze sleutel hoort bij een ander huishouden. Voeg dat huishouden apart toe.",
+      "reauth_successful": "De nieuwe sleutel werkt. Home Assistant stuurt weer meterstanden.",
+      "reconfigure_successful": "De sleutel is gewijzigd."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hoe gaan de meterstanden naar Thuisbord?",
+        "menu_options": {
+          "sensors": "Ik kies mijn sensoren, Thuisbord leest ze zelf",
+          "action": "Ik maak zelf een automatisering met de actie"
+        }
+      },
+      "sensors": {
+        "title": "Kies jullie sensoren",
+        "description": "Alleen vermogen is nodig. Kies verder alleen wat jullie meter geeft; Thuisbord stuurt hooguit elke 10 seconden een meting, en alleen de waarden die je hier kiest.",
+        "sections": {
+          "power_section": {
+            "name": "Vermogen (nodig)",
+            "description": "Kies één netto-vermogenssensor, of een afname- én een terugleveringssensor. W en kW worden allebei herkend.",
+            "data": {
+              "power": "Netto vermogen",
+              "power_import": "Vermogen afname",
+              "power_export": "Vermogen teruglevering"
+            },
+            "data_description": {
+              "power": "Positief bij afname, negatief bij teruglevering, zoals bij HomeWizard. Gekozen? Dan blijven de twee velden hieronder leeg.",
+              "power_import": "Wat jullie nu van het net halen, altijd positief, zoals DSMR Power consumption.",
+              "power_export": "Wat jullie nu aan het net leveren, als positief getal, zoals DSMR Power production."
+            }
+          },
+          "totals_section": {
+            "name": "Meterstanden en tarief (optioneel)",
+            "description": "Tarief 1 en tarief 2 gaan samen: kies ze allebei of geen van beide. Zonder meterstanden rekent Thuisbord jullie verbruik uit het vermogen; zonder tarief gebruikt Thuisbord jullie daluren. Wh, kWh en MWh worden allemaal herkend.",
+            "data": {
+              "import_total": "Afname totaal",
+              "import_t1": "Afname tarief 1",
+              "import_t2": "Afname tarief 2",
+              "export_total": "Teruglevering totaal",
+              "export_t1": "Teruglevering tarief 1",
+              "export_t2": "Teruglevering tarief 2",
+              "active_tariff": "Actief tarief"
+            },
+            "data_description": {
+              "import_total": "Afname van beide tarieven samen, voor een meter die geen standen per tarief geeft.",
+              "import_t1": "Meestal het daltarief.",
+              "import_t2": "Meestal het normale tarief.",
+              "export_total": "Teruglevering van beide tarieven samen.",
+              "active_tariff": "Een sensor met 1 of 2, of low of normal, zoals DSMR."
+            }
+          },
+          "extra_section": {
+            "name": "Zonnepanelen en gas (optioneel)",
+            "description": "Niet gekozen of tijdelijk onbekend? Dan blijft het veld weg uit de meting.",
+            "data": {
+              "solar_power": "Zonnestroom nu",
+              "solar_total": "Zonnestroom totaal",
+              "gas_total": "Gasmeterstand"
+            },
+            "data_description": {
+              "solar_power": "W of kW. Een negatieve waarde wordt 0.",
+              "gas_total": "In m³."
+            }
+          }
+        }
+      },
+      "action": {
+        "title": "Zelf een automatisering maken",
+        "description": "Home Assistant leest dan zelf geen sensoren meer. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom en gas."
+      }
+    },
+    "error": {
+      "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
+      "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
+      "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ voor gas."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "waiting": "Wacht op een meting",
+          "sending": "Stuurt meterstanden",
+          "retrying": "Probeert het opnieuw",
+          "refused": "Meting geweigerd",
+          "stopped": "Gestopt, nieuwe sleutel nodig"
+        },
+        "state_attributes": {
+          "code": {
+            "name": "Code"
+          }
+        }
+      },
+      "last_sent": {
+        "name": "Laatste meting verstuurd"
+      }
+    }
+  },
+  "exceptions": {
+    "reads_sensors": {
+      "message": "Deze Thuisbord-koppeling leest zelf jullie sensoren. Kies in de opties van de integratie voor de actie om zelf metingen te sturen."
+    },
+    "reading_required": {
+      "message": "{field} is nodig."
+    },
+    "reading_out_of_range": {
+      "message": "{field} heeft een waarde die Thuisbord niet aanneemt."
+    },
+    "reading_tariff_pair_incomplete": {
+      "message": "{field} ontbreekt. Standen per tarief gaan in paren: stuur ze allebei, of geen van beide."
+    },
+    "sending_stopped": {
+      "message": "Thuisbord neemt geen meterstanden aan met deze sleutel. Plak de nieuwe sleutel bij Instellingen › Apparaten en diensten › Thuisbord."
+    }
+  },
+  "issues": {
+    "sensor_missing": {
+      "title": "Thuisbord: sensor bestaat niet meer",
+      "description": "{title} gebruikt {entity_id}, maar die sensor bestaat niet meer. Kies een andere sensor in de opties van de Thuisbord-integratie."
+    },
+    "sensor_unit": {
+      "title": "Thuisbord: eenheid niet herkend",
+      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, of m³ voor gas, of kies een andere sensor in de opties van de Thuisbord-integratie."
+    },
+    "sensor_out_of_range": {
+      "title": "Thuisbord: waarde kan niet kloppen",
+      "description": "{entity_id} geeft een waarde die geen meter kan geven, dus deze waarde gaat niet mee. Controleer of je de juiste sensor hebt gekozen in de opties van de Thuisbord-integratie."
+    },
+    "sensor_unknown_value": {
+      "title": "Thuisbord: tarief niet herkend",
+      "description": "{entity_id} geeft geen tarief 1 of 2, of low of normal. Thuisbord gebruikt zolang jullie daluren. Kies een andere sensor in de opties van de Thuisbord-integratie, of laat Actief tarief leeg."
+    }
+  },
+  "services": {
+    "send_reading": {
+      "name": "Meting sturen",
+      "description": "Stuurt één meting naar Thuisbord. Alleen vermogen is nodig. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Thuisbord-koppeling",
+          "description": "Het huishouden dat de meting krijgt."
+        },
+        "active_power_w": {
+          "name": "Vermogen",
+          "description": "In watt: positief bij afname, negatief bij teruglevering."
+        },
+        "import_t1_kwh": {
+          "name": "Afname tarief 1",
+          "description": "In kWh, alleen samen met afname tarief 2."
+        },
+        "import_t2_kwh": {
+          "name": "Afname tarief 2",
+          "description": "In kWh, alleen samen met afname tarief 1."
+        },
+        "export_t1_kwh": {
+          "name": "Teruglevering tarief 1",
+          "description": "In kWh, alleen samen met teruglevering tarief 2."
+        },
+        "export_t2_kwh": {
+          "name": "Teruglevering tarief 2",
+          "description": "In kWh, alleen samen met teruglevering tarief 1."
+        },
+        "import_total_kwh": {
+          "name": "Afname totaal",
+          "description": "In kWh, beide tarieven samen."
+        },
+        "export_total_kwh": {
+          "name": "Teruglevering totaal",
+          "description": "In kWh, beide tarieven samen."
+        },
+        "active_tariff": {
+          "name": "Actief tarief",
+          "description": "1 of 2, zoals de meter het nummert. Meestal is 1 het daltarief."
+        },
+        "solar_power_w": {
+          "name": "Zonnestroom nu",
+          "description": "In watt. Een negatieve waarde wordt 0."
+        },
+        "solar_total_kwh": {
+          "name": "Zonnestroom totaal",
+          "description": "In kWh."
+        },
+        "gas_total_m3": {
+          "name": "Gasmeterstand",
+          "description": "In m³."
+        }
+      },
+      "sections": {
+        "totals": {
+          "name": "Meterstanden en tarief"
+        },
+        "extra": {
+          "name": "Zonnepanelen en gas"
+        }
+      }
+    }
+  }
+}

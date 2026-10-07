@@ -1,0 +1,343 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Thuisbord",
+        "description": "This integration sends your smart meter's readings to Thuisbord, so every screen in your home can show them. It reads only the sensors you choose and controls no devices.\n\nYou find the key in the Thuisbord app: Settings › Meter connection › Connect meter › Home Assistant. Under Your connection key, tap Copy and paste it here.",
+        "data": {
+          "connection_key": "Connection key"
+        },
+        "data_description": {
+          "connection_key": "Starts with thb_. Home Assistant keeps the key only in this integration and never writes it to the log."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Advanced",
+            "description": "Only needed to test with your own Thuisbord server.",
+            "data": {
+              "api_url": "Server address"
+            },
+            "data_description": {
+              "api_url": "Leave this at {default_url}."
+            }
+          }
+        }
+      },
+      "mode": {
+        "title": "How do the readings reach Thuisbord?",
+        "description": "The key works. Choose how Home Assistant sends readings.",
+        "menu_options": {
+          "sensors": "I choose my sensors, Thuisbord reads them itself",
+          "action": "I make my own automation with the action"
+        }
+      },
+      "sensors": {
+        "title": "Choose your sensors",
+        "description": "Only power is needed. Choose only what your meter reports; Thuisbord sends at most one reading every 10 seconds, with only the values you choose here.",
+        "sections": {
+          "power_section": {
+            "name": "Power (required)",
+            "description": "Choose one net power sensor, or an import and an export sensor. W and kW are both understood.",
+            "data": {
+              "power": "Net power",
+              "power_import": "Import power",
+              "power_export": "Export power"
+            },
+            "data_description": {
+              "power": "Positive when importing, negative when exporting, as HomeWizard reports it. When chosen, leave the two fields below empty.",
+              "power_import": "What you take from the grid now, always positive, such as DSMR Power consumption.",
+              "power_export": "What you send to the grid now, as a positive number, such as DSMR Power production."
+            }
+          },
+          "totals_section": {
+            "name": "Meter totals and tariff (optional)",
+            "description": "Tariff 1 and tariff 2 go together: choose both or neither. Without totals, Thuisbord works out your use from power; without the tariff, it uses your low-tariff hours. Wh, kWh and MWh are all understood.",
+            "data": {
+              "import_total": "Import total",
+              "import_t1": "Import tariff 1",
+              "import_t2": "Import tariff 2",
+              "export_total": "Export total",
+              "export_t1": "Export tariff 1",
+              "export_t2": "Export tariff 2",
+              "active_tariff": "Active tariff"
+            },
+            "data_description": {
+              "import_total": "Import of both tariffs together, for a meter that reports no totals per tariff.",
+              "import_t1": "Usually the low tariff.",
+              "import_t2": "Usually the normal tariff.",
+              "export_total": "Export of both tariffs together.",
+              "active_tariff": "A sensor reporting 1 or 2, or low or normal, as DSMR does."
+            }
+          },
+          "extra_section": {
+            "name": "Solar and gas (optional)",
+            "description": "Not chosen, or unknown for now? Then the field is left out of the reading.",
+            "data": {
+              "solar_power": "Solar power",
+              "solar_total": "Solar total",
+              "gas_total": "Gas total"
+            },
+            "data_description": {
+              "solar_power": "W or kW. A negative value becomes 0.",
+              "gas_total": "In m³."
+            }
+          }
+        }
+      },
+      "action": {
+        "title": "Make your own automation",
+        "description": "Home Assistant then reads no sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar and gas. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped."
+      },
+      "reauth_confirm": {
+        "title": "New connection key needed",
+        "description": "Thuisbord no longer takes readings with the saved key. Copy the key in the Thuisbord app (Settings › Meter connection › Connect meter › Home Assistant) and paste it here.",
+        "data": {
+          "connection_key": "Connection key"
+        },
+        "data_description": {
+          "connection_key": "Starts with thb_."
+        }
+      },
+      "reconfigure": {
+        "title": "Change the connection key",
+        "description": "Paste the key the Thuisbord app shows now.",
+        "data": {
+          "connection_key": "Connection key"
+        },
+        "data_description": {
+          "connection_key": "Starts with thb_."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Advanced",
+            "description": "Only needed to test with your own Thuisbord server.",
+            "data": {
+              "api_url": "Server address"
+            },
+            "data_description": {
+              "api_url": "Leave this at {default_url}."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_key_format": "This is not a Thuisbord connection key: that starts with thb_ and is long. Copy the whole key again in the Thuisbord app.",
+      "invalid_url": "This server address is not right. Use {default_url}.",
+      "insecure_url": "The server address must start with https://, because the key goes there. Only a server in your home or on this computer may use http://.",
+      "invalid_key": "Thuisbord does not know this connection key. Copy the key again in the Thuisbord app.",
+      "key_revoked": "Someone made a new key in the Thuisbord app. Paste the new key.",
+      "consent_not_recorded": "You have not given consent yet. In the Thuisbord app, tap I agree, then paste the key again.",
+      "token_not_allowed": "This is another key than the connection key. Use the key under Your connection key in the Thuisbord app.",
+      "key_refused": "Thuisbord refuses this key. Copy the key again in the Thuisbord app.",
+      "too_many_requests": "Thuisbord asks you to wait a moment. Try again in a minute.",
+      "unexpected_response": "Thuisbord gave an answer this integration does not know. Update the integration in HACS.",
+      "cannot_connect": "Thuisbord cannot be reached. Check Home Assistant's internet connection and try again.",
+      "power_required": "Choose a net power sensor, or an import and an export power sensor.",
+      "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
+      "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ for gas."
+    },
+    "abort": {
+      "already_configured": "This household is already connected.",
+      "wrong_household": "This key belongs to another household. Add that household separately.",
+      "reauth_successful": "The new key works. Home Assistant sends readings again.",
+      "reconfigure_successful": "The key was changed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "How do the readings reach Thuisbord?",
+        "menu_options": {
+          "sensors": "I choose my sensors, Thuisbord reads them itself",
+          "action": "I make my own automation with the action"
+        }
+      },
+      "sensors": {
+        "title": "Choose your sensors",
+        "description": "Only power is needed. Choose only what your meter reports; Thuisbord sends at most one reading every 10 seconds, with only the values you choose here.",
+        "sections": {
+          "power_section": {
+            "name": "Power (required)",
+            "description": "Choose one net power sensor, or an import and an export sensor. W and kW are both understood.",
+            "data": {
+              "power": "Net power",
+              "power_import": "Import power",
+              "power_export": "Export power"
+            },
+            "data_description": {
+              "power": "Positive when importing, negative when exporting, as HomeWizard reports it. When chosen, leave the two fields below empty.",
+              "power_import": "What you take from the grid now, always positive, such as DSMR Power consumption.",
+              "power_export": "What you send to the grid now, as a positive number, such as DSMR Power production."
+            }
+          },
+          "totals_section": {
+            "name": "Meter totals and tariff (optional)",
+            "description": "Tariff 1 and tariff 2 go together: choose both or neither. Without totals, Thuisbord works out your use from power; without the tariff, it uses your low-tariff hours. Wh, kWh and MWh are all understood.",
+            "data": {
+              "import_total": "Import total",
+              "import_t1": "Import tariff 1",
+              "import_t2": "Import tariff 2",
+              "export_total": "Export total",
+              "export_t1": "Export tariff 1",
+              "export_t2": "Export tariff 2",
+              "active_tariff": "Active tariff"
+            },
+            "data_description": {
+              "import_total": "Import of both tariffs together, for a meter that reports no totals per tariff.",
+              "import_t1": "Usually the low tariff.",
+              "import_t2": "Usually the normal tariff.",
+              "export_total": "Export of both tariffs together.",
+              "active_tariff": "A sensor reporting 1 or 2, or low or normal, as DSMR does."
+            }
+          },
+          "extra_section": {
+            "name": "Solar and gas (optional)",
+            "description": "Not chosen, or unknown for now? Then the field is left out of the reading.",
+            "data": {
+              "solar_power": "Solar power",
+              "solar_total": "Solar total",
+              "gas_total": "Gas total"
+            },
+            "data_description": {
+              "solar_power": "W or kW. A negative value becomes 0.",
+              "gas_total": "In m³."
+            }
+          }
+        }
+      },
+      "action": {
+        "title": "Make your own automation",
+        "description": "Home Assistant then no longer reads sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar and gas."
+      }
+    },
+    "error": {
+      "power_required": "Choose a net power sensor, or an import and an export power sensor.",
+      "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
+      "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ for gas."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Status",
+        "state": {
+          "waiting": "Waiting for a reading",
+          "sending": "Sending readings",
+          "retrying": "Trying again",
+          "refused": "Reading refused",
+          "stopped": "Stopped, new key needed"
+        },
+        "state_attributes": {
+          "code": {
+            "name": "Code"
+          }
+        }
+      },
+      "last_sent": {
+        "name": "Last reading sent"
+      }
+    }
+  },
+  "exceptions": {
+    "reads_sensors": {
+      "message": "This Thuisbord connection reads your sensors itself. To send readings yourself, choose the action in the integration's options."
+    },
+    "reading_required": {
+      "message": "{field} is required."
+    },
+    "reading_out_of_range": {
+      "message": "{field} has a value Thuisbord does not take."
+    },
+    "reading_tariff_pair_incomplete": {
+      "message": "{field} is missing. Totals per tariff go in pairs: send both, or neither."
+    },
+    "sending_stopped": {
+      "message": "Thuisbord takes no readings with this key. Paste the new key under Settings › Devices & services › Thuisbord."
+    }
+  },
+  "issues": {
+    "sensor_missing": {
+      "title": "Thuisbord: sensor no longer exists",
+      "description": "{title} uses {entity_id}, but that sensor no longer exists. Choose another sensor in the Thuisbord integration's options."
+    },
+    "sensor_unit": {
+      "title": "Thuisbord: unit not understood",
+      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, or m³ for gas, or choose another sensor in the Thuisbord integration's options."
+    },
+    "sensor_out_of_range": {
+      "title": "Thuisbord: impossible value",
+      "description": "{entity_id} reports a value no meter can report, so this value is left out. Check that you chose the right sensor in the Thuisbord integration's options."
+    },
+    "sensor_unknown_value": {
+      "title": "Thuisbord: tariff not understood",
+      "description": "{entity_id} reports no tariff 1 or 2, nor low or normal. Until it does, Thuisbord uses your low-tariff hours. Choose another sensor in the Thuisbord integration's options, or leave Active tariff empty."
+    }
+  },
+  "services": {
+    "send_reading": {
+      "name": "Send reading",
+      "description": "Sends one reading to Thuisbord. Only power is required. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Thuisbord connection",
+          "description": "The household that gets the reading."
+        },
+        "active_power_w": {
+          "name": "Power",
+          "description": "In watts: positive when importing, negative when exporting."
+        },
+        "import_t1_kwh": {
+          "name": "Import tariff 1",
+          "description": "In kWh, only together with import tariff 2."
+        },
+        "import_t2_kwh": {
+          "name": "Import tariff 2",
+          "description": "In kWh, only together with import tariff 1."
+        },
+        "export_t1_kwh": {
+          "name": "Export tariff 1",
+          "description": "In kWh, only together with export tariff 2."
+        },
+        "export_t2_kwh": {
+          "name": "Export tariff 2",
+          "description": "In kWh, only together with export tariff 1."
+        },
+        "import_total_kwh": {
+          "name": "Import total",
+          "description": "In kWh, both tariffs together."
+        },
+        "export_total_kwh": {
+          "name": "Export total",
+          "description": "In kWh, both tariffs together."
+        },
+        "active_tariff": {
+          "name": "Active tariff",
+          "description": "1 or 2, as the meter numbers it. Tariff 1 is usually the low tariff."
+        },
+        "solar_power_w": {
+          "name": "Solar power",
+          "description": "In watts. A negative value becomes 0."
+        },
+        "solar_total_kwh": {
+          "name": "Solar total",
+          "description": "In kWh."
+        },
+        "gas_total_m3": {
+          "name": "Gas total",
+          "description": "In m³."
+        }
+      },
+      "sections": {
+        "totals": {
+          "name": "Meter totals and tariff"
+        },
+        "extra": {
+          "name": "Solar and gas"
+        }
+      }
+    }
+  }
+}
