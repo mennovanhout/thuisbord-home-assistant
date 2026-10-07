@@ -22,7 +22,8 @@ Thuisbord turns a screen in your home into a shared household screen for energy 
 4. Zoek **Thuisbord** in HACS, klik op **Downloaden** en herstart Home Assistant.
 5. Ga naar **Instellingen › Apparaten en diensten › Integratie toevoegen** en kies **Thuisbord**.
 6. Kopieer in de Thuisbord-app de sleutel bij **Instellingen › Meterkoppeling › Meter koppelen › Home Assistant** en plak hem in het venster.
-7. Kies **Ik kies mijn sensoren** en kies jullie vermogenssensor. Klaar.
+7. Hebben jullie in de app nog niet op **Ik ga akkoord** getikt? Dan zegt Home Assistant dat de sleutel werkt en wacht het tot jullie dat doen.
+8. Kies **Ik kies mijn sensoren** en kies jullie vermogenssensor. Klaar.
 
 Werkt Thuisbord niet meer met de sleutel, bijvoorbeeld omdat iemand in de app een nieuwe heeft gemaakt? Dan vraagt Home Assistant om de nieuwe sleutel. De sensor **Thuisbord Status** laat zien wat de integratie doet.
 
@@ -48,7 +49,8 @@ Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, 
 4. Find **Thuisbord** in HACS, click **Download** and restart Home Assistant.
 5. Go to **Settings › Devices & services › Add integration** and choose **Thuisbord**.
 6. In the Thuisbord app, copy the key under **Settings › Meter connection › Connect meter › Home Assistant** and paste it in the window.
-7. Choose **I choose my sensors** and pick your power sensor. Done.
+7. Not tapped **I agree** in the app yet? Home Assistant says the key works and waits until you have.
+8. Choose **I choose my sensors** and pick your power sensor. Done.
 
 If Thuisbord stops accepting the key, for example because someone made a new one in the app, Home Assistant asks for the new key. The **Thuisbord Status** sensor shows what the integration is doing.
 
