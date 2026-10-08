@@ -9,12 +9,14 @@ never controls a device.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
@@ -75,6 +77,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ThuisbordConfigEntry) ->
 
     sender = ReadingSender(hass, entry, api, on_stopped=key_refused)
     entry.async_on_unload(sender.async_stop)
+
+    @callback
+    def refresh_status(_now: datetime) -> None:
+        sender.async_refresh()
+
+    # The status also changes when nothing happens: no new reading for 2 minutes.
+    entry.async_on_unload(
+        async_track_time_interval(hass, refresh_status, timedelta(seconds=30))
+    )
 
     reads_sensors = entry.options.get(CONF_MODE) == MODE_SENSORS
     if reads_sensors:

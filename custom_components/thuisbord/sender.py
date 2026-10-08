@@ -19,6 +19,8 @@
   and sends the rest once. A batch is never sent again unchanged.
 - 401 and 403: stops, drops the buffer, and asks the household for a new key.
 - Requests are at least 5 seconds apart, so a key never makes more than 12 a minute.
+- The status shows `waiting` with the code `no_new_reading` when no reading was offered for
+  2 minutes, for example because the power sensor is unavailable or reports nothing new.
 
 The readings stay in memory only and are never logged. The status holds no key and no reading.
 """
@@ -54,6 +56,8 @@ MAX_AGE: Final = 24 * 3600.0 - 600.0
 BACKOFF_BASE: Final = 10.0
 BACKOFF_MAX: Final = 300.0
 RETRY_AFTER_MAX: Final = 3600.0
+# Without a new reading for this long, the status no longer says it is sending.
+IDLE_AFTER: Final = 120.0
 
 CLOCK_CODES: Final = frozenset({"in_future", "too_old"})
 READINGS_FIELD: Final = re.compile(r"^readings\.(\d+)(?:\.([a-z0-9_]+))?")
@@ -175,6 +179,7 @@ class ReadingSender:
 
         self._state = State.WAITING
         self._code: str | None = None
+        self._shown: tuple[State, str | None] = (State.WAITING, None)
         self._http: int | None = None
         self._fields: tuple[str, ...] = ()
 
@@ -200,9 +205,16 @@ class ReadingSender:
     @property
     def status(self) -> Status:
         """The current status."""
+        state, code = self._state, self._code
+        if (
+            state is State.SENDING
+            and self._last_queued_at is not None
+            and _now() - self._last_queued_at >= IDLE_AFTER
+        ):
+            state, code = State.WAITING, "no_new_reading"
         return Status(
-            state=self._state,
-            code=self._code,
+            state=state,
+            code=code,
             http=self._http,
             fields=self._fields,
             buffered=len(self._queue),
@@ -222,6 +234,13 @@ class ReadingSender:
             self._listeners.remove(listener)
 
         return remove
+
+    @callback
+    def async_refresh(self) -> None:
+        """Tell the listeners when the status changed only because time passed."""
+        status = self.status
+        if (status.state, status.code) != self._shown:
+            self._notify()
 
     @callback
     def async_stop(self) -> None:
@@ -420,6 +439,8 @@ class ReadingSender:
         self._notify()
 
     def _notify(self) -> None:
+        status = self.status
+        self._shown = (status.state, status.code)
         for listener in list(self._listeners):
             listener()
 

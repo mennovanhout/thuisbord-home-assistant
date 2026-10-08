@@ -100,6 +100,32 @@ async def test_sends_power_every_10_seconds(
     assert sent(aioclient_mock)[-1] == [{"measured_at": f"{DAY}T21:16:00Z", "active_power_w": 840}]
 
 
+async def test_status_says_when_nothing_new_arrives(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    aioclient_mock: AiohttpClientMocker,
+    sensors_entry: MockConfigEntry,
+) -> None:
+    """A meter that stops reporting is not shown as sending: after 2 minutes, waiting."""
+    aioclient_mock.post(READINGS_URL, status=202, json=accepted(f"{DAY}T21:15:50Z"))
+    await start(hass, freezer, sensors_entry)
+    await at(hass, freezer, "21:15:40")
+    assert hass.states.get(STATUS).state == "sending"
+
+    hass.states.async_set(POWER_ENTITY, "unavailable")
+    await at(hass, freezer, "21:16:40")
+    assert hass.states.get(STATUS).state == "sending"
+    await at(hass, freezer, "21:17:50")
+    state = hass.states.get(STATUS)
+    assert (state.state, state.attributes["code"]) == ("waiting", "no_new_reading")
+    assert len(sent(aioclient_mock)) == 1
+
+    meter(hass, freezer, "21:17:55", "800")
+    await at(hass, freezer, "21:18:00")
+    state = hass.states.get(STATUS)
+    assert (state.state, state.attributes["code"]) == ("sending", None)
+
+
 async def test_offline_buffers_one_per_minute(
     hass: HomeAssistant,
     freezer: FrozenDateTimeFactory,
