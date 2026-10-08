@@ -69,12 +69,54 @@ async def test_action_sends_a_reading(
     assert aioclient_mock.call_count == 1
 
 
+async def test_action_sends_a_home_battery(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    aioclient_mock: AiohttpClientMocker,
+    action_entry: MockConfigEntry,
+) -> None:
+    """The battery's four fields go as given, in Thuisbord's sign: positive while charging."""
+    freezer.move_to("2026-10-06 14:03:10+00:00")
+    aioclient_mock.post(READINGS_URL, status=202, json=accepted("2026-10-06T14:03:20Z"))
+    assert await hass.config_entries.async_setup(action_entry.entry_id)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_SEND_READING,
+        {
+            "config_entry_id": action_entry.entry_id,
+            "active_power_w": -420,
+            "battery_power_w": "2200",
+            "battery_level_pct": 64.4,
+            "battery_limit_pct": 20,
+            "battery_capacity_kwh": 10,
+        },
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    _, _, data, _ = aioclient_mock.mock_calls[0]
+    assert data == {
+        "readings": [
+            {
+                "measured_at": "2026-10-06T14:03:10Z",
+                "active_power_w": -420,
+                "battery_power_w": 2200,
+                "battery_level_pct": 64,
+                "battery_limit_pct": 20,
+                "battery_capacity_kwh": "10.000",
+            }
+        ]
+    }
+
+
 @pytest.mark.parametrize(
     ("values", "key", "field"),
     [
         ({"active_power_w": 1, "import_t1_kwh": 1}, "reading_tariff_pair_incomplete", "import_t2_kwh"),
         ({"active_power_w": 70000}, "reading_out_of_range", "active_power_w"),
         ({"active_power_w": 1, "active_tariff": 3}, "reading_out_of_range", "active_tariff"),
+        ({"active_power_w": 1, "battery_level_pct": 101}, "reading_out_of_range", "battery_level_pct"),
+        ({"active_power_w": 1, "battery_capacity_kwh": 0}, "reading_out_of_range", "battery_capacity_kwh"),
     ],
 )
 async def test_action_refuses_what_thuisbord_would_refuse(

@@ -3,7 +3,7 @@
 Thuisbord is a household screen for energy and family. This integration is a bridge only: it
 sends readings to the household's own Thuisbord, with the household's connection key. It reads
 the sensors the household chose, or takes readings from the `thuisbord.send_reading` action. It
-never controls a device.
+never controls a device, a home battery included.
 """
 
 from __future__ import annotations
@@ -25,11 +25,14 @@ from .collector import SensorCollector
 from .const import (
     ALL_SENSORS,
     CONF_API_URL,
+    CONF_BATTERY_CAPACITY,
+    CONF_BATTERY_POWER_SIGN,
     CONF_CONNECTION_KEY,
     CONF_MODE,
     DEFAULT_API_URL,
     DOMAIN,
     MODE_SENSORS,
+    SIGN_DISCHARGING_POSITIVE,
 )
 from .sender import ReadingSender
 from .services import async_setup_services
@@ -90,7 +93,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ThuisbordConfigEntry) ->
     reads_sensors = entry.options.get(CONF_MODE) == MODE_SENSORS
     if reads_sensors:
         sensors = {key: entry.options[key] for key in ALL_SENSORS if entry.options.get(key)}
-        collector = SensorCollector(hass, entry, sender, sensors)
+        collector = SensorCollector(
+            hass,
+            entry,
+            sender,
+            sensors,
+            battery_sign=entry.options.get(CONF_BATTERY_POWER_SIGN, SIGN_DISCHARGING_POSITIVE),
+            battery_capacity=entry.options.get(CONF_BATTERY_CAPACITY),
+        )
         entry.async_on_unload(collector.async_start())
 
     entry.runtime_data = ThuisbordData(sender=sender, reads_sensors=reads_sensors)

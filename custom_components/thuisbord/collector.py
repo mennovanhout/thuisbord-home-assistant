@@ -22,7 +22,13 @@ from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_utc_time_change
 
-from .const import CONF_POWER, CONF_POWER_EXPORT, CONF_POWER_IMPORT, DOMAIN
+from .const import (
+    CONF_POWER,
+    CONF_POWER_EXPORT,
+    CONF_POWER_IMPORT,
+    DOMAIN,
+    SIGN_DISCHARGING_POSITIVE,
+)
 from .reading import Problem, SensorState, build_reading
 from .sender import ReadingSender
 
@@ -38,12 +44,21 @@ class SensorCollector:
         entry: ConfigEntry,
         sender: ReadingSender,
         sensors: Mapping[str, str],
+        *,
+        battery_sign: str = SIGN_DISCHARGING_POSITIVE,
+        battery_capacity: float | None = None,
     ) -> None:
-        """Read `sensors`, a map from the option name to the entity ID."""
+        """Read `sensors`, a map from the option name to the entity ID.
+
+        `battery_sign` says how the battery power sensor reads, `battery_capacity` is the capacity
+        in kWh the household entered; both only matter with battery sensors.
+        """
         self._hass = hass
         self._entry = entry
         self._sender = sender
         self._sensors = dict(sensors)
+        self._battery_sign = battery_sign
+        self._battery_capacity = battery_capacity
         self._power = [
             entity_id
             for key, entity_id in self._sensors.items()
@@ -79,7 +94,12 @@ class SensorCollector:
                 else SensorState(state.state, state.attributes.get(ATTR_UNIT_OF_MEASUREMENT))
             )
 
-        built = build_reading(moment, states)
+        built = build_reading(
+            moment,
+            states,
+            battery_sign=self._battery_sign,
+            battery_capacity=self._battery_capacity,
+        )
         self._update_issues(built.problems, moment)
         if built.reading is None:
             return

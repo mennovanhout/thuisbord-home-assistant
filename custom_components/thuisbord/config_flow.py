@@ -27,6 +27,12 @@ from homeassistant.helpers.selector import (
     EntityFilterSelectorConfig,
     EntitySelector,
     EntitySelectorConfig,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -36,8 +42,15 @@ from homeassistant.loader import async_get_integration
 from .api import CannotConnect, KeyRefused, ThuisbordApi, TooManyRequests, UnexpectedResponse
 from .const import (
     ALL_SENSORS,
+    BATTERY_POWER_SIGNS,
+    BATTERY_SENSORS,
     CONF_ACTIVE_TARIFF,
     CONF_API_URL,
+    CONF_BATTERY_CAPACITY,
+    CONF_BATTERY_LEVEL,
+    CONF_BATTERY_LIMIT,
+    CONF_BATTERY_POWER,
+    CONF_BATTERY_POWER_SIGN,
     CONF_CONNECTION_KEY,
     CONF_EXPORT_T1,
     CONF_EXPORT_T2,
@@ -57,8 +70,9 @@ from .const import (
     MODE_ACTION,
     MODE_SENSORS,
     SENSOR_PAIRS,
+    SIGN_DISCHARGING_POSITIVE,
 )
-from .reading import ENERGY_UNITS, GAS_UNITS, POWER_UNITS
+from .reading import ENERGY_UNITS, GAS_UNITS, PERCENT_UNITS, POWER_UNITS
 
 # The contract's pattern for a connection key (api/openapi.yaml, connectionKey). The UUID part
 # names the household and becomes the entry's unique ID.
@@ -70,6 +84,8 @@ SECTION_ADVANCED: Final = "advanced"
 SECTION_POWER: Final = "power_section"
 SECTION_TOTALS: Final = "totals_section"
 SECTION_EXTRA: Final = "extra_section"
+SECTION_BATTERY: Final = "battery_section"
+SENSOR_SECTIONS: Final = (SECTION_POWER, SECTION_TOTALS, SECTION_EXTRA, SECTION_BATTERY)
 
 # Which units each chosen sensor may report. The sensor selector already filters on device
 # class; this catches a sensor whose unit Thuisbord cannot convert.
@@ -78,6 +94,9 @@ SENSOR_UNITS: Final = {
     CONF_POWER_IMPORT: POWER_UNITS,
     CONF_POWER_EXPORT: POWER_UNITS,
     CONF_SOLAR_POWER: POWER_UNITS,
+    CONF_BATTERY_POWER: POWER_UNITS,
+    CONF_BATTERY_LEVEL: PERCENT_UNITS,
+    CONF_BATTERY_LIMIT: PERCENT_UNITS,
     CONF_IMPORT_TOTAL: ENERGY_UNITS,
     CONF_IMPORT_T1: ENERGY_UNITS,
     CONF_IMPORT_T2: ENERGY_UNITS,
@@ -116,6 +135,30 @@ KEY_SELECTOR: Final = TextSelector(
     TextSelectorConfig(type=TextSelectorType.PASSWORD, autocomplete="off")
 )
 URL_SELECTOR: Final = TextSelector(TextSelectorConfig(type=TextSelectorType.URL))
+
+# How the battery power sensor reads: positive while discharging, the energy dashboard's standard
+# and so the default, or positive while charging.
+SIGN_SELECTOR: Final = SelectSelector(
+    SelectSelectorConfig(
+        options=list(BATTERY_POWER_SIGNS),
+        translation_key=CONF_BATTERY_POWER_SIGN,
+        mode=SelectSelectorMode.LIST,
+    )
+)
+# The battery's limit is often a setting of the battery's integration (a number entity, such as
+# a minimum state of charge), and sometimes a sensor.
+LIMIT_SELECTOR: Final = EntitySelector(
+    EntitySelectorConfig(
+        filter=EntityFilterSelectorConfig(domain=["sensor", "number", "input_number"])
+    )
+)
+# The usable capacity in kWh, a number like the energy dashboard's battery `capacity`: above 0
+# and at most 1000, as BatteryCapacityKwh in the contract, with up to three decimals.
+CAPACITY_SELECTOR: Final = NumberSelector(
+    NumberSelectorConfig(
+        min=0.001, max=1000, step=0.001, unit_of_measurement="kWh", mode=NumberSelectorMode.BOX
+    )
+)
 
 
 def household_id(key: str) -> str | None:
@@ -205,7 +248,7 @@ def _entity(device_class: SensorDeviceClass | None = None) -> EntitySelector:
 
 
 def sensors_schema() -> vol.Schema:
-    """The form for choosing sensors: power first, then totals and tariff, then solar and gas."""
+    """The form for choosing sensors: power, totals and tariff, solar and gas, a home battery."""
     power = _entity(SensorDeviceClass.POWER)
     energy = _entity(SensorDeviceClass.ENERGY)
     return vol.Schema(
@@ -243,23 +286,50 @@ def sensors_schema() -> vol.Schema:
                 ),
                 {"collapsed": True},
             ),
+            vol.Required(SECTION_BATTERY): section(
+                vol.Schema(
+                    {
+                        vol.Optional(CONF_BATTERY_LEVEL): _entity(SensorDeviceClass.BATTERY),
+                        vol.Optional(CONF_BATTERY_POWER): power,
+                        vol.Optional(
+                            CONF_BATTERY_POWER_SIGN, default=SIGN_DISCHARGING_POSITIVE
+                        ): SIGN_SELECTOR,
+                        vol.Optional(CONF_BATTERY_LIMIT): LIMIT_SELECTOR,
+                        vol.Optional(CONF_BATTERY_CAPACITY): CAPACITY_SELECTOR,
+                    }
+                ),
+                {"collapsed": True},
+            ),
         }
     )
 
 
-def flatten_sensors(user_input: Mapping[str, Any]) -> dict[str, str]:
-    """Return the chosen sensors from the form's sections, without empty ones."""
-    chosen: dict[str, str] = {}
-    for part in (SECTION_POWER, SECTION_TOTALS, SECTION_EXTRA):
+def flatten_sensors(user_input: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the choice from the form's sections, without empty fields.
+
+    The chosen sensors' entity IDs, and for a home battery how its power sensor reads (only with a
+    battery power sensor) and the capacity in kWh, if entered.
+    """
+    chosen: dict[str, Any] = {}
+    for part in SENSOR_SECTIONS:
         for key, value in (user_input.get(part) or {}).items():
             if key in ALL_SENSORS and isinstance(value, str) and value:
                 chosen[key] = value
+    battery = user_input.get(SECTION_BATTERY) or {}
+    if CONF_BATTERY_POWER in chosen:
+        sign = battery.get(CONF_BATTERY_POWER_SIGN)
+        chosen[CONF_BATTERY_POWER_SIGN] = (
+            sign if sign in BATTERY_POWER_SIGNS else SIGN_DISCHARGING_POSITIVE
+        )
+    capacity = battery.get(CONF_BATTERY_CAPACITY)
+    if isinstance(capacity, int | float) and not isinstance(capacity, bool):
+        chosen[CONF_BATTERY_CAPACITY] = float(capacity)
     return chosen
 
 
-def nest_sensors(options: Mapping[str, Any]) -> dict[str, dict[str, str]]:
-    """Return stored sensors in the form's sections, to suggest them again."""
-    sections: dict[str, dict[str, str]] = {SECTION_POWER: {}, SECTION_TOTALS: {}, SECTION_EXTRA: {}}
+def nest_sensors(options: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Return the stored choice in the form's sections, to suggest it again."""
+    sections: dict[str, dict[str, Any]] = {part: {} for part in SENSOR_SECTIONS}
     for key in ALL_SENSORS:
         value = options.get(key)
         if not value:
@@ -268,12 +338,17 @@ def nest_sensors(options: Mapping[str, Any]) -> dict[str, dict[str, str]]:
             sections[SECTION_POWER][key] = value
         elif key in (CONF_SOLAR_POWER, CONF_SOLAR_TOTAL, CONF_GAS_TOTAL):
             sections[SECTION_EXTRA][key] = value
+        elif key in BATTERY_SENSORS:
+            sections[SECTION_BATTERY][key] = value
         else:
             sections[SECTION_TOTALS][key] = value
+    for key in (CONF_BATTERY_POWER_SIGN, CONF_BATTERY_CAPACITY):
+        if options.get(key) is not None:
+            sections[SECTION_BATTERY][key] = options[key]
     return sections
 
 
-def check_sensors(hass: HomeAssistant, chosen: Mapping[str, str]) -> tuple[str | None, str]:
+def check_sensors(hass: HomeAssistant, chosen: Mapping[str, Any]) -> tuple[str | None, str]:
     """Return an error key and the entity it is about, or (None, "") when the choice is usable."""
     if CONF_POWER not in chosen and not (
         CONF_POWER_IMPORT in chosen and CONF_POWER_EXPORT in chosen
@@ -284,10 +359,16 @@ def check_sensors(hass: HomeAssistant, chosen: Mapping[str, str]) -> tuple[str |
     for first, second in SENSOR_PAIRS:
         if (first in chosen) != (second in chosen):
             return "pair_incomplete", chosen.get(first) or chosen.get(second, "")
-    for key, entity_id in chosen.items():
+    if CONF_BATTERY_CAPACITY in chosen and not any(key in chosen for key in BATTERY_SENSORS):
+        # The capacity goes along only with the battery's charge level, power or limit.
+        return "battery_capacity_alone", ""
+    for key in ALL_SENSORS:
+        entity_id = chosen.get(key)
         units = SENSOR_UNITS.get(key)
+        if entity_id is None or units is None:
+            continue
         state = hass.states.get(entity_id)
-        if units is None or state is None:
+        if state is None:
             continue
         if state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) not in units:
             return "unsupported_unit", entity_id

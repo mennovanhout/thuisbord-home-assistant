@@ -74,3 +74,36 @@ send_reading:
               step: 0.001
               unit_of_measurement: m³
               mode: box
+    battery:
+      collapsed: true
+      fields:
+        battery_power_w:
+          example: 2200
+          selector:
+            number:
+              min: -60000
+              max: 60000
+              step: 1
+              unit_of_measurement: W
+              mode: box
+        battery_level_pct:
+          example: 64
+          selector: &percent
+            number:
+              min: 0
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
+              mode: box
+        battery_limit_pct:
+          example: 20
+          selector: *percent
+        battery_capacity_kwh:
+          example: "10.000"
+          selector:
+            number:
+              min: 0.001
+              max: 1000
+              step: 0.001
+              unit_of_measurement: kWh
+              mode: box

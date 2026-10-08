@@ -9,6 +9,9 @@ import pytest
 
 from custom_components.thuisbord.const import (
     CONF_ACTIVE_TARIFF,
+    CONF_BATTERY_LEVEL,
+    CONF_BATTERY_LIMIT,
+    CONF_BATTERY_POWER,
     CONF_EXPORT_T1,
     CONF_EXPORT_T2,
     CONF_GAS_TOTAL,
@@ -20,6 +23,8 @@ from custom_components.thuisbord.const import (
     CONF_POWER_IMPORT,
     CONF_SOLAR_POWER,
     CONF_SOLAR_TOTAL,
+    SIGN_CHARGING_POSITIVE,
+    SIGN_DISCHARGING_POSITIVE,
 )
 from custom_components.thuisbord.reading import (
     READING_FIELDS,
@@ -30,6 +35,8 @@ from custom_components.thuisbord.reading import (
     build_reading,
     reading_from_values,
 )
+
+POWER_840 = SensorState("840", "W")
 
 AT = datetime(2026, 10, 6, 21, 15, 40, 250000, tzinfo=UTC)
 
@@ -201,6 +208,121 @@ def test_zero_total() -> None:
     assert built.reading["export_t2_kwh"] == "0.000"
 
 
+def test_reading_fields_end_with_the_battery() -> None:
+    """The battery's four fields follow gas, in the contract's order (0.11.0)."""
+    assert READING_FIELDS[-5:] == (
+        "gas_total_m3",
+        "battery_power_w",
+        "battery_level_pct",
+        "battery_limit_pct",
+        "battery_capacity_kwh",
+    )
+
+
+def test_battery_in_the_energy_dashboard_sign() -> None:
+    """A battery power sensor that is positive while discharging, the default, is turned.
+
+    The contract's 'battery' example: the panels charge the battery at 2200 W, which such a sensor
+    reports as -2.2 kW. Thuisbord's sign is positive while charging.
+    """
+    built = build_reading(
+        AT,
+        {
+            CONF_POWER: SensorState("-420", "W"),
+            CONF_BATTERY_POWER: SensorState("-2.2", "kW"),
+            CONF_BATTERY_LEVEL: SensorState("64.4", "%"),
+            CONF_BATTERY_LIMIT: SensorState("20", "%"),
+        },
+        battery_capacity=10.0,
+    )
+    assert built.problems == ()
+    assert built.reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": -420,
+        "battery_power_w": 2200,
+        "battery_level_pct": 64,
+        "battery_limit_pct": 20,
+        "battery_capacity_kwh": "10.000",
+    }
+    assert list(built.reading) == [f for f in READING_FIELDS if f in built.reading]
+
+
+@pytest.mark.parametrize(
+    ("sign", "raw", "watts"),
+    [
+        (SIGN_DISCHARGING_POSITIVE, "1450", -1450),
+        (SIGN_DISCHARGING_POSITIVE, "-2200", 2200),
+        (SIGN_CHARGING_POSITIVE, "2200", 2200),
+        (SIGN_CHARGING_POSITIVE, "-1450", -1450),
+        (SIGN_DISCHARGING_POSITIVE, "0", 0),
+        (SIGN_DISCHARGING_POSITIVE, "-0.5", 1),
+        (SIGN_CHARGING_POSITIVE, "-0.5", -1),
+    ],
+)
+def test_battery_power_sign(sign: str, raw: str, watts: int) -> None:
+    """The sign is turned unless the sensor is positive while charging; rounding is symmetric."""
+    built = build_reading(AT, {CONF_POWER: POWER_840, CONF_BATTERY_POWER: SensorState(raw, "W")}, battery_sign=sign)
+    assert built.reading is not None
+    assert built.reading["battery_power_w"] == watts
+
+
+def test_battery_capacity_only_with_a_battery_value() -> None:
+    """The capacity goes along with a measured battery value, never on its own."""
+    states = {
+        CONF_POWER: POWER_840,
+        CONF_BATTERY_LEVEL: SensorState("unavailable", "%"),
+        CONF_BATTERY_POWER: SensorState("unknown", "W"),
+    }
+    built = build_reading(AT, states, battery_capacity=13.5)
+    assert built.reading == {"measured_at": "2026-10-06T21:15:40Z", "active_power_w": 840}
+    assert built.problems == ()
+
+    states[CONF_BATTERY_LEVEL] = SensorState("99.5", "%")
+    built = build_reading(AT, states, battery_capacity=13.5)
+    assert built.reading is not None
+    assert built.reading["battery_level_pct"] == 100
+    assert built.reading["battery_capacity_kwh"] == "13.500"
+
+
+@pytest.mark.parametrize(
+    ("sensor", "state", "reason"),
+    [
+        (CONF_BATTERY_LEVEL, SensorState("100.5", "%"), Reason.OUT_OF_RANGE),
+        (CONF_BATTERY_LIMIT, SensorState("-1", "%"), Reason.OUT_OF_RANGE),
+        (CONF_BATTERY_POWER, SensorState("60.001", "kW"), Reason.OUT_OF_RANGE),
+        (CONF_BATTERY_LEVEL, SensorState("64", "kWh"), Reason.UNIT),
+        (CONF_BATTERY_POWER, SensorState("2200", "VA"), Reason.UNIT),
+    ],
+)
+def test_unusable_battery_value_is_left_out(sensor: str, state: SensorState, reason: Reason) -> None:
+    """A battery value that cannot be right is left out and named; power still goes."""
+    built = build_reading(AT, {CONF_POWER: POWER_840, sensor: state}, battery_capacity=10)
+    assert built.reading == {"measured_at": "2026-10-06T21:15:40Z", "active_power_w": 840}
+    assert built.problems == (Problem(sensor, reason),)
+
+
+def test_action_battery_values() -> None:
+    """The action takes the battery in Thuisbord's sign, rounded to whole watts and percent."""
+    reading = reading_from_values(
+        AT,
+        {
+            "active_power_w": 120,
+            "battery_power_w": -1450.4,
+            "battery_level_pct": "64.5",
+            "battery_limit_pct": 20,
+            "battery_capacity_kwh": Decimal("13.5"),
+        },
+    )
+    assert reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 120,
+        "battery_power_w": -1450,
+        "battery_level_pct": 65,
+        "battery_limit_pct": 20,
+        "battery_capacity_kwh": "13.500",
+    }
+
+
 def test_action_values() -> None:
     """Numbers from the automation editor become the contract's fields."""
     reading = reading_from_values(
@@ -234,6 +356,12 @@ def test_action_values() -> None:
         ({"active_power_w": 1, "import_t1_kwh": 1}, "import_t2_kwh", "tariff_pair_incomplete"),
         ({"active_power_w": 1, "gas_total_m3": -1}, "gas_total_m3", "out_of_range"),
         ({"active_power_w": 1, "active_tariff": 3}, "active_tariff", "out_of_range"),
+        ({"active_power_w": 1, "battery_power_w": 60001}, "battery_power_w", "out_of_range"),
+        ({"active_power_w": 1, "battery_level_pct": 100.5}, "battery_level_pct", "out_of_range"),
+        ({"active_power_w": 1, "battery_limit_pct": -1}, "battery_limit_pct", "out_of_range"),
+        ({"active_power_w": 1, "battery_capacity_kwh": 0}, "battery_capacity_kwh", "out_of_range"),
+        ({"active_power_w": 1, "battery_capacity_kwh": "0.0004"}, "battery_capacity_kwh", "out_of_range"),
+        ({"active_power_w": 1, "battery_capacity_kwh": 1000.001}, "battery_capacity_kwh", "out_of_range"),
     ],
 )
 def test_action_values_refused(values: dict, field: str, code: str) -> None:

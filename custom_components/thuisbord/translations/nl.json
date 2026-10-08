@@ -85,12 +85,30 @@
               "solar_power": "W of kW. Een negatieve waarde wordt 0.",
               "gas_total": "In m³ of liter."
             }
+          },
+          "battery_section": {
+            "name": "Thuisbatterij (optioneel)",
+            "description": "Thuisbord laat jullie thuisbatterij zien en bedient haar nooit. Kies wat jullie batterij meldt; de capaciteit vul je zelf in.",
+            "data": {
+              "battery_level": "Laadniveau",
+              "battery_power": "Batterijvermogen",
+              "battery_power_sign": "Batterijvermogen is positief bij",
+              "battery_limit": "Grens laadniveau",
+              "battery_capacity": "Capaciteit"
+            },
+            "data_description": {
+              "battery_level": "Hoe vol de batterij is, in %.",
+              "battery_power": "W of kW. Thuisbord toont laden en ontladen apart.",
+              "battery_power_sign": "In het Energiedashboard is positief standaard ontladen. Is jullie sensor positief als de batterij laadt, kies dan Laden.",
+              "battery_limit": "De grens die in de batterij is ingesteld, meestal de reserve die ze vasthoudt, in %. Een sensor of een getal-entiteit.",
+              "battery_capacity": "De bruikbare capaciteit in kWh, zoals in de gegevens van jullie batterij. Gaat alleen mee met een batterijsensor hierboven."
+            }
           }
         }
       },
       "action": {
         "title": "Zelf een automatisering maken",
-        "description": "Home Assistant leest dan zelf geen sensoren. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom en gas. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen."
+        "description": "Home Assistant leest dan zelf geen sensoren. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas en jullie thuisbatterij. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen."
       },
       "reauth_confirm": {
         "title": "Nieuwe koppelsleutel nodig",
@@ -140,8 +158,9 @@
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ of liter voor gas.",
-      "consent_still_missing": "Nog geen toestemming in de Thuisbord-app. Tik daar op Ik ga akkoord en probeer het opnieuw."
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, of % voor het laadniveau en de grens van de batterij.",
+      "consent_still_missing": "Nog geen toestemming in de Thuisbord-app. Tik daar op Ik ga akkoord en probeer het opnieuw.",
+      "battery_capacity_alone": "De capaciteit gaat alleen mee met het laadniveau, het vermogen of de grens van de batterij. Kies ook een van die sensoren, of laat Capaciteit leeg."
     },
     "abort": {
       "already_configured": "Dit huishouden is al gekoppeld.",
@@ -209,19 +228,38 @@
               "solar_power": "W of kW. Een negatieve waarde wordt 0.",
               "gas_total": "In m³ of liter."
             }
+          },
+          "battery_section": {
+            "name": "Thuisbatterij (optioneel)",
+            "description": "Thuisbord laat jullie thuisbatterij zien en bedient haar nooit. Kies wat jullie batterij meldt; de capaciteit vul je zelf in.",
+            "data": {
+              "battery_level": "Laadniveau",
+              "battery_power": "Batterijvermogen",
+              "battery_power_sign": "Batterijvermogen is positief bij",
+              "battery_limit": "Grens laadniveau",
+              "battery_capacity": "Capaciteit"
+            },
+            "data_description": {
+              "battery_level": "Hoe vol de batterij is, in %.",
+              "battery_power": "W of kW. Thuisbord toont laden en ontladen apart.",
+              "battery_power_sign": "In het Energiedashboard is positief standaard ontladen. Is jullie sensor positief als de batterij laadt, kies dan Laden.",
+              "battery_limit": "De grens die in de batterij is ingesteld, meestal de reserve die ze vasthoudt, in %. Een sensor of een getal-entiteit.",
+              "battery_capacity": "De bruikbare capaciteit in kWh, zoals in de gegevens van jullie batterij. Gaat alleen mee met een batterijsensor hierboven."
+            }
           }
         }
       },
       "action": {
         "title": "Zelf een automatisering maken",
-        "description": "Home Assistant leest dan zelf geen sensoren meer. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom en gas."
+        "description": "Home Assistant leest dan zelf geen sensoren meer. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas en jullie thuisbatterij."
       }
     },
     "error": {
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ of liter voor gas."
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, of % voor het laadniveau en de grens van de batterij.",
+      "battery_capacity_alone": "De capaciteit gaat alleen mee met het laadniveau, het vermogen of de grens van de batterij. Kies ook een van die sensoren, of laat Capaciteit leeg."
     }
   },
   "entity": {
@@ -270,11 +308,11 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: eenheid niet herkend",
-      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, of m³ of liter voor gas, of kies een andere sensor in de opties van de Thuisbord-integratie."
+      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, m³ of liter voor gas, of % voor de batterij, of kies een andere sensor in de opties van de Thuisbord-integratie."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: waarde kan niet kloppen",
-      "description": "{entity_id} geeft een waarde die geen meter kan geven, dus deze waarde gaat niet mee. Controleer of je de juiste sensor hebt gekozen in de opties van de Thuisbord-integratie."
+      "description": "{entity_id} geeft een waarde die geen meter of batterij kan geven, dus deze waarde gaat niet mee. Controleer of je de juiste sensor hebt gekozen in de opties van de Thuisbord-integratie."
     },
     "sensor_unknown_value": {
       "title": "Thuisbord: tarief niet herkend",
@@ -333,6 +371,22 @@
         "gas_total_m3": {
           "name": "Gasmeterstand",
           "description": "In m³."
+        },
+        "battery_power_w": {
+          "name": "Batterijvermogen",
+          "description": "In watt: positief als de batterij laadt, negatief als ze ontlaadt. Draai het teken om als jullie sensor het andersom geeft."
+        },
+        "battery_level_pct": {
+          "name": "Laadniveau",
+          "description": "Hoe vol de batterij is, in %."
+        },
+        "battery_limit_pct": {
+          "name": "Grens laadniveau",
+          "description": "De grens die in de batterij is ingesteld, meestal de reserve, in %."
+        },
+        "battery_capacity_kwh": {
+          "name": "Capaciteit",
+          "description": "De bruikbare capaciteit van de batterij, in kWh."
         }
       },
       "sections": {
@@ -341,7 +395,18 @@
         },
         "extra": {
           "name": "Zonnepanelen en gas"
+        },
+        "battery": {
+          "name": "Thuisbatterij"
         }
+      }
+    }
+  },
+  "selector": {
+    "battery_power_sign": {
+      "options": {
+        "discharging_positive": "Ontladen, zoals in het Energiedashboard",
+        "charging_positive": "Laden"
       }
     }
   }

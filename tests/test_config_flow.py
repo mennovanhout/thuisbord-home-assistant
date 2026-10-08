@@ -16,6 +16,11 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClien
 
 from custom_components.thuisbord.const import (
     CONF_API_URL,
+    CONF_BATTERY_CAPACITY,
+    CONF_BATTERY_LEVEL,
+    CONF_BATTERY_LIMIT,
+    CONF_BATTERY_POWER,
+    CONF_BATTERY_POWER_SIGN,
     CONF_CONNECTION_KEY,
     CONF_EXPORT_T1,
     CONF_IMPORT_T1,
@@ -28,6 +33,8 @@ from custom_components.thuisbord.const import (
     DOMAIN,
     MODE_ACTION,
     MODE_SENSORS,
+    SIGN_CHARGING_POSITIVE,
+    SIGN_DISCHARGING_POSITIVE,
 )
 
 from .conftest import (
@@ -41,22 +48,43 @@ from .conftest import (
 )
 
 ADVANCED = {"advanced": {CONF_API_URL: DEFAULT_API_URL}}
+BATTERY_LEVEL = "sensor.home_battery_state_of_charge"
+BATTERY_POWER = "sensor.home_battery_power"
+BATTERY_LIMIT = "number.home_battery_minimum_state_of_charge"
 
 
-def sensors_input(**chosen: str) -> dict[str, Any]:
-    """The sensors form as the frontend sends it, with its three sections."""
+BATTERY_FIELDS = (
+    CONF_BATTERY_LEVEL,
+    CONF_BATTERY_POWER,
+    CONF_BATTERY_POWER_SIGN,
+    CONF_BATTERY_LIMIT,
+    CONF_BATTERY_CAPACITY,
+)
+
+
+def sensors_input(**chosen: Any) -> dict[str, Any]:
+    """The sensors form as the frontend sends it, with its four sections."""
     power = {k: v for k, v in chosen.items() if k in (CONF_POWER, CONF_POWER_IMPORT, CONF_POWER_EXPORT)}
     extra = {k: v for k, v in chosen.items() if k in ("solar_power", "solar_total", "gas_total")}
-    totals = {k: v for k, v in chosen.items() if k not in power and k not in extra}
-    return {"power_section": power, "totals_section": totals, "extra_section": extra}
+    battery = {k: v for k, v in chosen.items() if k in BATTERY_FIELDS}
+    totals = {k: v for k, v in chosen.items() if k not in power and k not in extra and k not in battery}
+    return {
+        "power_section": power,
+        "totals_section": totals,
+        "extra_section": extra,
+        "battery_section": battery,
+    }
 
 
 @pytest.fixture(autouse=True)
 def power_sensor(hass: HomeAssistant) -> None:
-    """A P1 meter's net power sensor and an energy total."""
+    """A P1 meter's net power sensor and an energy total, and a home battery's sensors."""
     hass.states.async_set(POWER_ENTITY, "840", {"unit_of_measurement": "W"})
     hass.states.async_set("sensor.p1_import_t1", "4182.517", {"unit_of_measurement": "kWh"})
     hass.states.async_set("sensor.p1_import_t2", "3920.044", {"unit_of_measurement": "kWh"})
+    hass.states.async_set(BATTERY_LEVEL, "64", {"unit_of_measurement": "%"})
+    hass.states.async_set(BATTERY_POWER, "-2.2", {"unit_of_measurement": "kW"})
+    hass.states.async_set(BATTERY_LIMIT, "20", {"unit_of_measurement": "%"})
 
 
 async def _to_menu(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> dict[str, Any]:
@@ -106,6 +134,62 @@ async def test_sensors(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker)
         CONF_IMPORT_T2: "sensor.p1_import_t2",
     }
     assert result["result"].unique_id == HOUSEHOLD
+
+
+async def test_sensors_with_a_home_battery(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The battery section stores its sensors, how the power sensor reads, and the capacity."""
+    result = await _to_menu(hass, aioclient_mock)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    with patch("custom_components.thuisbord.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            sensors_input(
+                power=POWER_ENTITY,
+                battery_level=BATTERY_LEVEL,
+                battery_power=BATTERY_POWER,
+                battery_limit=BATTERY_LIMIT,
+                battery_capacity=10.24,
+            ),
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"] == {
+        CONF_MODE: MODE_SENSORS,
+        CONF_POWER: POWER_ENTITY,
+        CONF_BATTERY_LEVEL: BATTERY_LEVEL,
+        CONF_BATTERY_POWER: BATTERY_POWER,
+        CONF_BATTERY_LIMIT: BATTERY_LIMIT,
+        CONF_BATTERY_POWER_SIGN: SIGN_DISCHARGING_POSITIVE,
+        CONF_BATTERY_CAPACITY: 10.24,
+    }
+
+
+async def test_battery_sign_kept_only_with_a_battery_power_sensor(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """A sensor positive while charging is stored as such; without a power sensor, no sign."""
+    result = await _to_menu(hass, aioclient_mock)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    with patch("custom_components.thuisbord.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            sensors_input(
+                power=POWER_ENTITY,
+                battery_level=BATTERY_LEVEL,
+                battery_power_sign=SIGN_CHARGING_POSITIVE,
+            ),
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"] == {
+        CONF_MODE: MODE_SENSORS,
+        CONF_POWER: POWER_ENTITY,
+        CONF_BATTERY_LEVEL: BATTERY_LEVEL,
+    }
 
 
 async def test_action(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
@@ -311,15 +395,19 @@ async def test_household_already_added(
         ({CONF_POWER: POWER_ENTITY, CONF_IMPORT_T1: "sensor.p1_import_t1"}, "pair_incomplete"),
         ({CONF_POWER: POWER_ENTITY, CONF_EXPORT_T1: "sensor.p1_import_t1"}, "pair_incomplete"),
         ({CONF_POWER: "sensor.p1_import_t1"}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_BATTERY_LEVEL: "sensor.p1_import_t1"}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_BATTERY_POWER: BATTERY_LEVEL}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_BATTERY_CAPACITY: 10}, "battery_capacity_alone"),
     ],
 )
 async def test_sensor_choice_refused(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
-    chosen: dict[str, str],
+    chosen: dict[str, Any],
     error: str,
 ) -> None:
-    """Power is required, pairs go together, and units must be ones Thuisbord converts."""
+    """Power is required, pairs go together, units must be ones Thuisbord converts, and the
+    battery's capacity needs a battery sensor."""
     result = await _to_menu(hass, aioclient_mock)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": MODE_SENSORS}
@@ -439,6 +527,40 @@ async def test_options_change_sensors(
         CONF_POWER: POWER_ENTITY,
         CONF_IMPORT_T1: "sensor.p1_import_t1",
         CONF_IMPORT_T2: "sensor.p1_import_t2",
+    }
+
+
+async def test_options_suggest_the_battery(hass: HomeAssistant) -> None:
+    """The options form suggests the stored battery sensors, sign and capacity again."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Thuisbord",
+        unique_id=HOUSEHOLD,
+        data={CONF_CONNECTION_KEY: KEY, CONF_API_URL: DEFAULT_API_URL},
+        options={
+            CONF_MODE: MODE_SENSORS,
+            CONF_POWER: POWER_ENTITY,
+            CONF_BATTERY_POWER: BATTERY_POWER,
+            CONF_BATTERY_POWER_SIGN: SIGN_CHARGING_POSITIVE,
+            CONF_BATTERY_CAPACITY: 13.5,
+        },
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    schema = result["data_schema"].schema
+    battery_section = next(v for k, v in schema.items() if k == "battery_section")
+    suggested = {
+        str(key): key.description.get("suggested_value")
+        for key in battery_section.schema.schema
+        if key.description
+    }
+    assert suggested == {
+        CONF_BATTERY_POWER: BATTERY_POWER,
+        CONF_BATTERY_POWER_SIGN: SIGN_CHARGING_POSITIVE,
+        CONF_BATTERY_CAPACITY: 13.5,
     }
 
 

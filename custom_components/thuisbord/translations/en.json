@@ -85,12 +85,30 @@
               "solar_power": "W or kW. A negative value becomes 0.",
               "gas_total": "In m³ or litres."
             }
+          },
+          "battery_section": {
+            "name": "Home battery (optional)",
+            "description": "Thuisbord shows your home battery and never controls it. Choose what your battery reports; you enter the capacity yourself.",
+            "data": {
+              "battery_level": "Charge level",
+              "battery_power": "Battery power",
+              "battery_power_sign": "Battery power is positive when",
+              "battery_limit": "Charge level limit",
+              "battery_capacity": "Capacity"
+            },
+            "data_description": {
+              "battery_level": "How full the battery is, in %.",
+              "battery_power": "W or kW. Thuisbord shows charging and discharging separately.",
+              "battery_power_sign": "In the Energy dashboard, positive means discharging by default. If your sensor is positive while the battery charges, choose Charging.",
+              "battery_limit": "The limit set in the battery, usually the reserve it keeps, in %. A sensor or a number entity.",
+              "battery_capacity": "The usable capacity in kWh, as your battery's specifications give it. Goes along only with a battery sensor above."
+            }
           }
         }
       },
       "action": {
         "title": "Make your own automation",
-        "description": "Home Assistant then reads no sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar and gas. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped."
+        "description": "Home Assistant then reads no sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas and your home battery. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped."
       },
       "reauth_confirm": {
         "title": "New connection key needed",
@@ -140,8 +158,9 @@
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ or litres for gas.",
-      "consent_still_missing": "No consent in the Thuisbord app yet. Tap I agree there and try again."
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, or % for the battery's charge level and limit.",
+      "consent_still_missing": "No consent in the Thuisbord app yet. Tap I agree there and try again.",
+      "battery_capacity_alone": "The capacity only goes along with the battery's charge level, power or limit. Choose one of those sensors too, or leave Capacity empty."
     },
     "abort": {
       "already_configured": "This household is already connected.",
@@ -209,19 +228,38 @@
               "solar_power": "W or kW. A negative value becomes 0.",
               "gas_total": "In m³ or litres."
             }
+          },
+          "battery_section": {
+            "name": "Home battery (optional)",
+            "description": "Thuisbord shows your home battery and never controls it. Choose what your battery reports; you enter the capacity yourself.",
+            "data": {
+              "battery_level": "Charge level",
+              "battery_power": "Battery power",
+              "battery_power_sign": "Battery power is positive when",
+              "battery_limit": "Charge level limit",
+              "battery_capacity": "Capacity"
+            },
+            "data_description": {
+              "battery_level": "How full the battery is, in %.",
+              "battery_power": "W or kW. Thuisbord shows charging and discharging separately.",
+              "battery_power_sign": "In the Energy dashboard, positive means discharging by default. If your sensor is positive while the battery charges, choose Charging.",
+              "battery_limit": "The limit set in the battery, usually the reserve it keeps, in %. A sensor or a number entity.",
+              "battery_capacity": "The usable capacity in kWh, as your battery's specifications give it. Goes along only with a battery sensor above."
+            }
           }
         }
       },
       "action": {
         "title": "Make your own automation",
-        "description": "Home Assistant then no longer reads sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar and gas."
+        "description": "Home Assistant then no longer reads sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas and your home battery."
       }
     },
     "error": {
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ or litres for gas."
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, or % for the battery's charge level and limit.",
+      "battery_capacity_alone": "The capacity only goes along with the battery's charge level, power or limit. Choose one of those sensors too, or leave Capacity empty."
     }
   },
   "entity": {
@@ -270,11 +308,11 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: unit not understood",
-      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, or m³ or litres for gas, or choose another sensor in the Thuisbord integration's options."
+      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, m³ or litres for gas, or % for the battery, or choose another sensor in the Thuisbord integration's options."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: impossible value",
-      "description": "{entity_id} reports a value no meter can report, so this value is left out. Check that you chose the right sensor in the Thuisbord integration's options."
+      "description": "{entity_id} reports a value no meter or battery can report, so this value is left out. Check that you chose the right sensor in the Thuisbord integration's options."
     },
     "sensor_unknown_value": {
       "title": "Thuisbord: tariff not understood",
@@ -333,6 +371,22 @@
         "gas_total_m3": {
           "name": "Gas total",
           "description": "In m³."
+        },
+        "battery_power_w": {
+          "name": "Battery power",
+          "description": "In watts: positive while the battery charges, negative while it discharges. Turn the sign if your sensor reports it the other way round."
+        },
+        "battery_level_pct": {
+          "name": "Charge level",
+          "description": "How full the battery is, in %."
+        },
+        "battery_limit_pct": {
+          "name": "Charge level limit",
+          "description": "The limit set in the battery, usually its reserve, in %."
+        },
+        "battery_capacity_kwh": {
+          "name": "Capacity",
+          "description": "The battery's usable capacity, in kWh."
         }
       },
       "sections": {
@@ -341,7 +395,18 @@
         },
         "extra": {
           "name": "Solar and gas"
+        },
+        "battery": {
+          "name": "Home battery"
         }
+      }
+    }
+  },
+  "selector": {
+    "battery_power_sign": {
+      "options": {
+        "discharging_positive": "Discharging, as in the Energy dashboard",
+        "charging_positive": "Charging"
       }
     }
   }

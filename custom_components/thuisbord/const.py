@@ -32,7 +32,12 @@ CONF_ACTIVE_TARIFF: Final = "active_tariff"
 CONF_SOLAR_POWER: Final = "solar_power"
 CONF_SOLAR_TOTAL: Final = "solar_total"
 CONF_GAS_TOTAL: Final = "gas_total"
+# A home battery, which Thuisbord shows and never controls.
+CONF_BATTERY_LEVEL: Final = "battery_level"
+CONF_BATTERY_POWER: Final = "battery_power"
+CONF_BATTERY_LIMIT: Final = "battery_limit"
 
+BATTERY_SENSORS: Final = (CONF_BATTERY_LEVEL, CONF_BATTERY_POWER, CONF_BATTERY_LIMIT)
 POWER_SENSORS: Final = (CONF_POWER, CONF_POWER_IMPORT, CONF_POWER_EXPORT)
 OPTIONAL_SENSORS: Final = (
     CONF_IMPORT_TOTAL,
@@ -45,8 +50,22 @@ OPTIONAL_SENSORS: Final = (
     CONF_SOLAR_POWER,
     CONF_SOLAR_TOTAL,
     CONF_GAS_TOTAL,
+    *BATTERY_SENSORS,
 )
 ALL_SENSORS: Final = POWER_SENSORS + OPTIONAL_SENSORS
+
+# How the battery power sensor's sign reads. Thuisbord's own sign is positive while charging. Home
+# Assistant's energy dashboard takes a battery power sensor as positive while discharging, and
+# offers to invert it (homeassistant/components/energy/data.py, `PowerConfig`), so that is the
+# default here too, turned before sending; a sensor that is positive while charging is sent as it is.
+CONF_BATTERY_POWER_SIGN: Final = "battery_power_sign"
+SIGN_DISCHARGING_POSITIVE: Final = "discharging_positive"
+SIGN_CHARGING_POSITIVE: Final = "charging_positive"
+BATTERY_POWER_SIGNS: Final = (SIGN_DISCHARGING_POSITIVE, SIGN_CHARGING_POSITIVE)
+
+# The battery's usable capacity, a number in kWh rather than a sensor, as the energy dashboard
+# keeps it (`capacity` of a battery source).
+CONF_BATTERY_CAPACITY: Final = "battery_capacity"
 
 # The sensors that only go together: a total per tariff needs the other tariff.
 SENSOR_PAIRS: Final = (

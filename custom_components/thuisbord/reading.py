@@ -11,6 +11,13 @@ A reading holds the fields of `Reading` in the Thuisbord API contract and nothin
   When one half is unknown, both halves are left out, because the contract refuses half a pair.
 - `active_tariff`: 1 or 2, as the meter numbers it. Optional.
 - `solar_power_w`: whole watts, 0 when an inverter reports its standby use as negative.
+- a home battery, which Thuisbord shows and never controls, each field optional on its own:
+  `battery_power_w` in whole watts, positive while the battery charges and negative while it
+  discharges (Thuisbord's sign); `battery_level_pct` and `battery_limit_pct` in whole percent from
+  0 to 100; `battery_capacity_kwh` as text with three decimals, above 0 and at most 1000. A battery
+  power sensor reads, by Home Assistant's energy dashboard convention, positive while discharging,
+  so its sign is turned unless the household says it is positive while charging. The capacity is
+  a number the household enters, and goes along only with another battery value.
 
 A value that is unknown or unavailable is left out, never sent as null or 0. Nothing in this
 module logs: values never reach the log.
@@ -27,6 +34,9 @@ from typing import Final
 
 from .const import (
     CONF_ACTIVE_TARIFF,
+    CONF_BATTERY_LEVEL,
+    CONF_BATTERY_LIMIT,
+    CONF_BATTERY_POWER,
     CONF_EXPORT_T1,
     CONF_EXPORT_T2,
     CONF_EXPORT_TOTAL,
@@ -39,13 +49,19 @@ from .const import (
     CONF_POWER_IMPORT,
     CONF_SOLAR_POWER,
     CONF_SOLAR_TOTAL,
+    SIGN_CHARGING_POSITIVE,
+    SIGN_DISCHARGING_POSITIVE,
 )
 
-# GridPowerW and SolarPowerW in the contract.
+# GridPowerW, SolarPowerW and BatteryPowerW in the contract.
 POWER_LIMIT_W: Final = 60000
 # EnergyTotalKwh and GasTotalM3: from 0 to 999999.999.
 TOTAL_LIMIT: Final = Decimal("999999.999")
 THOUSANDTH: Final = Decimal("0.001")
+# BatteryPercent: whole percent from 0 to 100.
+PERCENT_LIMIT: Final = 100
+# BatteryCapacityKwh: above 0 and at most 1000 kWh.
+CAPACITY_LIMIT: Final = Decimal(1000)
 
 # The units each kind of sensor may report, and the factor to the contract's unit.
 # Decimal factors, not Home Assistant's float converters, so a meter's three decimals arrive
@@ -58,6 +74,15 @@ POWER_UNITS: Final = {
 }
 ENERGY_UNITS: Final = {"Wh": Decimal("0.001"), "kWh": Decimal(1), "MWh": Decimal(1000)}
 GAS_UNITS: Final = {"L": Decimal("0.001"), "m³": Decimal(1)}
+PERCENT_UNITS: Final = {"%": Decimal(1)}
+
+# The battery's percentages, each from its own sensor.
+BATTERY_PERCENTS: Final = (
+    (CONF_BATTERY_LEVEL, "battery_level_pct"),
+    (CONF_BATTERY_LIMIT, "battery_limit_pct"),
+)
+# The fields of a battery that are measured; the capacity goes along only with one of them.
+BATTERY_MEASURED: Final = ("battery_power_w", "battery_level_pct", "battery_limit_pct")
 
 # How each total sensor maps to a field of the reading.
 ENERGY_TOTALS: Final = (
@@ -88,6 +113,10 @@ READING_FIELDS: Final = (
     "solar_power_w",
     "solar_total_kwh",
     "gas_total_m3",
+    "battery_power_w",
+    "battery_level_pct",
+    "battery_limit_pct",
+    "battery_capacity_kwh",
 )
 
 TARIFF_WORDS: Final = {"1": 1, "low": 1, "2": 2, "normal": 2}
@@ -171,6 +200,30 @@ def _watts(value: Decimal) -> int:
     return int(value.quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
+def _percent(value: Decimal) -> int | None:
+    """Return a percentage in whole percent, or None when it is not from 0 to 100 once rounded."""
+    rounded = _watts(value)
+    return rounded if 0 <= rounded <= PERCENT_LIMIT else None
+
+
+def format_capacity(value: Decimal) -> str | None:
+    """Return a capacity as text with three decimals, or None unless above 0 and at most 1000."""
+    rounded = value.quantize(THOUSANDTH, rounding=ROUND_HALF_UP)
+    if rounded <= 0 or rounded > CAPACITY_LIMIT:
+        return None
+    return f"{rounded:.3f}"
+
+
+def battery_watts(value: Decimal, sign: str) -> int:
+    """Return a battery sensor's power in Thuisbord's sign: positive while charging.
+
+    `sign` says how the sensor reads: SIGN_DISCHARGING_POSITIVE, the energy dashboard's standard
+    and the default, is turned; SIGN_CHARGING_POSITIVE is sent as it is.
+    """
+    watts = _watts(value)
+    return watts if sign == SIGN_CHARGING_POSITIVE else -watts
+
+
 class _Reader:
     """Reads the chosen sensors and collects problems."""
 
@@ -218,11 +271,18 @@ class _Reader:
         return None
 
 
-def build_reading(measured_at: datetime, states: Mapping[str, SensorState | None]) -> Built:
+def build_reading(
+    measured_at: datetime,
+    states: Mapping[str, SensorState | None],
+    *,
+    battery_sign: str = SIGN_DISCHARGING_POSITIVE,
+    battery_capacity: float | Decimal | None = None,
+) -> Built:
     """Build one reading from the states of the chosen sensors.
 
     `states` holds an entry for every chosen sensor: its state, or None when the entity no longer
-    exists. Sensors that were not chosen are absent.
+    exists. Sensors that were not chosen are absent. `battery_sign` says how the battery power
+    sensor reads; `battery_capacity` is the capacity in kWh the household entered, if any.
     """
     reader = _Reader(states)
 
@@ -281,6 +341,28 @@ def build_reading(measured_at: datetime, states: Mapping[str, SensorState | None
         else:
             reading["solar_power_w"] = solar_w
 
+    battery = reader.value(CONF_BATTERY_POWER, POWER_UNITS)
+    if battery is not None:
+        battery_w = battery_watts(battery, battery_sign)
+        if abs(battery_w) > POWER_LIMIT_W:
+            reader.problems.append(Problem(CONF_BATTERY_POWER, Reason.OUT_OF_RANGE))
+        else:
+            reading["battery_power_w"] = battery_w
+    for sensor, field in BATTERY_PERCENTS:
+        value = reader.value(sensor, PERCENT_UNITS)
+        if value is None:
+            continue
+        percent = _percent(value)
+        if percent is None:
+            reader.problems.append(Problem(sensor, Reason.OUT_OF_RANGE))
+        else:
+            reading[field] = percent
+    if battery_capacity is not None and any(field in reading for field in BATTERY_MEASURED):
+        capacity = _number(str(battery_capacity))
+        text = None if capacity is None else format_capacity(capacity)
+        if text is not None:
+            reading["battery_capacity_kwh"] = text
+
     problems = tuple(reader.problems)
     if power is None:
         return Built(None, problems)
@@ -292,9 +374,11 @@ def build_reading(measured_at: datetime, states: Mapping[str, SensorState | None
 def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> Reading:
     """Build one reading from the fields of an action call.
 
-    `values` uses the reading's own field names. Raises InvalidReading, naming the field, when a
-    value cannot be sent; never silently changes what the household asked to send, except that
-    totals are written with three decimals and a negative solar power becomes 0.
+    `values` uses the reading's own field names, and the battery's power is already in Thuisbord's
+    sign, positive while charging. Raises InvalidReading, naming the field, when a value cannot be
+    sent; never silently changes what the household asked to send, except that totals and the
+    capacity are written with three decimals, percentages are rounded to whole percent, and a
+    negative solar power becomes 0.
     """
     reading: Reading = {"measured_at": format_measured_at(measured_at)}
 
@@ -334,6 +418,26 @@ def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> 
         if solar_w > POWER_LIMIT_W:
             raise InvalidReading("solar_power_w", "out_of_range")
         reading["solar_power_w"] = solar_w
+
+    if values.get("battery_power_w") is not None:
+        battery = _number(str(values["battery_power_w"]))
+        if battery is None or abs(_watts(battery)) > POWER_LIMIT_W:
+            raise InvalidReading("battery_power_w", "out_of_range")
+        reading["battery_power_w"] = _watts(battery)
+    for field in ("battery_level_pct", "battery_limit_pct"):
+        if values.get(field) is None:
+            continue
+        number = _number(str(values[field]))
+        percent = None if number is None else _percent(number)
+        if percent is None:
+            raise InvalidReading(field, "out_of_range")
+        reading[field] = percent
+    if values.get("battery_capacity_kwh") is not None:
+        number = _number(str(values["battery_capacity_kwh"]))
+        text = None if number is None else format_capacity(number)
+        if text is None:
+            raise InvalidReading("battery_capacity_kwh", "out_of_range")
+        reading["battery_capacity_kwh"] = text
 
     return _ordered(reading)
 
