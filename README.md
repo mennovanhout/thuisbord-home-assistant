@@ -11,8 +11,19 @@ Thuisbord turns a screen in your home into a shared household screen for energy 
 ### Wat het doet
 
 - Je koppelt Home Assistant aan jullie Thuisbord met de **koppelsleutel** uit de Thuisbord-app. Home Assistant controleert de sleutel meteen bij Thuisbord.
-- Je kiest jullie sensoren: vermogen (nodig), en als jullie meter ze geeft de meterstanden per tarief of totaal, het actieve tarief, zonnestroom en gas. De integratie stuurt dan zelf een meting, hooguit elke 10 seconden.
+- Je kiest jullie sensoren: vermogen (nodig), en als jullie meter ze geeft de meterstanden per tarief of totaal, het actieve tarief, zonnestroom en gas, en een thuisbatterij. De integratie stuurt dan zelf een meting, hooguit elke 10 seconden.
 - Of je kiest voor de actie **Thuisbord: Meting sturen** en maakt zelf een automatisering.
+
+### Thuisbatterij
+
+Thuisbord laat een thuisbatterij zien en bedient haar nooit. In het formulier met de sensoren staat het onderdeel **Thuisbatterij (optioneel)**:
+
+- **Laadniveau**: een sensor in %, zoals de laadtoestand van de batterij.
+- **Batterijvermogen**: een sensor in W of kW. Thuisbord rekent met positief bij laden. In het Energiedashboard van Home Assistant is een batterijvermogen standaard positief bij ontladen, dus zo leest de integratie hem ook en draait ze het teken om. Is jullie sensor positief als de batterij laadt, kies dan bij **Batterijvermogen is positief bij** voor **Laden**.
+- **Grens laadniveau**: de grens die in de batterij is ingesteld, meestal de reserve, in %. Vaak een getal-entiteit van de integratie van de batterij; een sensor kan ook.
+- **Capaciteit**: de bruikbare capaciteit in kWh, als getal, zoals het Energiedashboard die ook vraagt. Ze gaat alleen mee met een van de andere waarden van de batterij.
+
+Elke waarde is optioneel. Is een batterijsensor even onbekend, dan blijft alleen die waarde weg; klopt hij niet, dan meldt Home Assistant dat bij Reparaties en gaat de rest gewoon mee.
 
 ### Installeren via HACS
 
@@ -29,7 +40,7 @@ Werkt Thuisbord niet meer met de sleutel, bijvoorbeeld omdat iemand in de app ee
 
 ### Wat Thuisbord krijgt
 
-Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, meterstanden en tarief, zonnestroom en gas. Niets anders uit Home Assistant. De sleutel blijft in deze integratie, staat nooit in het logboek en wordt in diagnostische gegevens weggelaten. Meetwaarden komen ook niet in het logboek.
+Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, meterstanden en tarief, zonnestroom en gas, en van een thuisbatterij het vermogen, het laadniveau, de grens en de capaciteit. Niets anders uit Home Assistant. De sleutel blijft in deze integratie, staat nooit in het logboek en wordt in diagnostische gegevens weggelaten. Meetwaarden komen ook niet in het logboek.
 
 ---
 
@@ -38,8 +49,19 @@ Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, 
 ### What it does
 
 - You connect Home Assistant to your Thuisbord with the **connection key** from the Thuisbord app. Home Assistant checks the key with Thuisbord at once.
-- You choose your sensors: power (required) and, when your meter reports them, totals per tariff or combined, the active tariff, solar and gas. The integration then sends a reading by itself, at most every 10 seconds.
+- You choose your sensors: power (required) and, when your meter reports them, totals per tariff or combined, the active tariff, solar and gas, and a home battery. The integration then sends a reading by itself, at most every 10 seconds.
 - Or you choose the action **Thuisbord: Send reading** and build your own automation.
+
+### Home battery
+
+Thuisbord shows a home battery and never controls it. The sensors form has a section **Home battery (optional)**:
+
+- **Charge level**: a sensor in %, such as the battery's state of charge.
+- **Battery power**: a sensor in W or kW. Thuisbord counts positive while charging. In Home Assistant's Energy dashboard a battery's power is positive while discharging by default, so that is how the integration reads it too, and it turns the sign. If your sensor is positive while the battery charges, choose **Charging** under **Battery power is positive when**.
+- **Charge level limit**: the limit set in the battery, usually its reserve, in %. Often a number entity of the battery's integration; a sensor works too.
+- **Capacity**: the usable capacity in kWh, as a number, as the Energy dashboard asks for it as well. It goes along only with one of the battery's other values.
+
+Every value is optional. When a battery sensor is briefly unknown, only that value is left out; when it cannot be right, Home Assistant says so under Repairs and the rest goes along as usual.
 
 ### Install through HACS
 
@@ -56,7 +78,7 @@ If Thuisbord stops accepting the key, for example because someone made a new one
 
 ### What Thuisbord receives
 
-Only the values you choose, at most one reading every 10 seconds: power, meter totals and tariff, solar and gas. Nothing else from Home Assistant. The key stays in this integration, never reaches the log and is redacted from diagnostics. Readings never reach the log either.
+Only the values you choose, at most one reading every 10 seconds: power, meter totals and tariff, solar and gas, and a home battery's power, charge level, limit and capacity. Nothing else from Home Assistant. The key stays in this integration, never reaches the log and is redacted from diagnostics. Readings never reach the log either.
 
 ### The action
 
@@ -70,6 +92,15 @@ data:
 ```
 
 Only `active_power_w` is required. Totals per tariff go in pairs. A reading less than 10 seconds after the previous one is skipped; with `response_variable` the action answers `queued`, `too_soon` or an error.
+
+A home battery goes in the same call, each field optional: `battery_power_w` in watts, positive while the battery charges and negative while it discharges (turn the sign in the template if your sensor reports it the other way round), `battery_level_pct` and `battery_limit_pct` in % (rounded to whole percent), and `battery_capacity_kwh`, above 0 and at most 1000.
+
+```yaml
+  # A sensor in W that is positive while discharging, as in the Energy dashboard: turned.
+  battery_power_w: "{{ -(states('sensor.home_battery_power') | float) }}"
+  battery_level_pct: "{{ states('sensor.home_battery_state_of_charge') }}"
+  battery_capacity_kwh: 10
+```
 
 ---
 
@@ -98,6 +129,7 @@ The API this integration calls is Thuisbord's: `GET /connection` to check a key 
 
 - Home Assistant developer docs: [integration manifest](https://developers.home-assistant.io/docs/creating_integration_manifest), [config flow](https://developers.home-assistant.io/docs/core/integration/config_flow), [options flow](https://developers.home-assistant.io/docs/config_entries_options_flow_handler), [config entries](https://developers.home-assistant.io/docs/config_entries_index), [service actions](https://developers.home-assistant.io/docs/dev_101_services), [raising exceptions](https://developers.home-assistant.io/docs/core/platform/raising_exceptions), [custom integration translations](https://developers.home-assistant.io/docs/internationalization/custom_integration), [diagnostics](https://developers.home-assistant.io/docs/core/integration/diagnostics), [inject-websession](https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/inject-websession), [listening to events](https://developers.home-assistant.io/docs/integration_listen_events), [brand images](https://developers.home-assistant.io/docs/core/integration/brand_images), [repairs](https://developers.home-assistant.io/docs/core/platform/repairs)
 - Home Assistant user docs: [selectors](https://www.home-assistant.io/docs/blueprint/selectors/)
+- For the home battery (0.2.0, read on 8 October 2026): the [Energy dashboard](https://www.home-assistant.io/docs/energy/) and [home batteries](https://www.home-assistant.io/docs/energy/battery/) pages, which state no sign; the battery source in the energy component's source, [`homeassistant/components/energy/data.py`](https://github.com/home-assistant/core/blob/dev/homeassistant/components/energy/data.py), whose `stat_rate` is "positive when discharging, negative when charging", with `stat_rate_inverted` for a sensor the other way round, `stat_soc` for the state of charge and `capacity` as a number in kWh; [translations of selectors](https://developers.home-assistant.io/docs/internationalization/core/) for the sign's options
 - HACS: [publishing](https://hacs.xyz/docs/publish/start), [integrations](https://hacs.xyz/docs/publish/integration), [inclusion](https://hacs.xyz/docs/publish/include), [action](https://hacs.xyz/docs/publish/action)
 
 ## Licence
