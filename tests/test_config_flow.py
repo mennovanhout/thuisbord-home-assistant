@@ -496,6 +496,18 @@ async def test_reconfigure(
     assert sensors_entry.options[CONF_POWER] == POWER_ENTITY
 
 
+async def _settle(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+    """Let the reload that saved options start finish, then unload the entry.
+
+    Saving options reloads the entry in a task of its own. A test that ends
+    while that task still runs leaves the status timer behind, and the test
+    harness fails on it now and then.
+    """
+    await hass.async_block_till_done()
+    await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
 async def test_options_change_sensors(
     hass: HomeAssistant, sensors_entry: MockConfigEntry
 ) -> None:
@@ -528,6 +540,7 @@ async def test_options_change_sensors(
         CONF_IMPORT_T1: "sensor.p1_import_t1",
         CONF_IMPORT_T2: "sensor.p1_import_t2",
     }
+    await _settle(hass, sensors_entry)
 
 
 async def test_options_suggest_the_battery(hass: HomeAssistant) -> None:
@@ -575,3 +588,4 @@ async def test_options_switch_to_action(
     result = await hass.config_entries.options.async_configure(result["flow_id"], {})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert sensors_entry.options == {CONF_MODE: MODE_ACTION}
+    await _settle(hass, sensors_entry)
