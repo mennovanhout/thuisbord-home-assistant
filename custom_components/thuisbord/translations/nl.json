@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Thuisbord koppelen",
-        "description": "Deze integratie stuurt de meterstanden van jullie slimme meter naar Thuisbord, zodat elk scherm in huis ze laat zien. Ze leest alleen de sensoren die je kiest en bedient geen apparaten.\n\nJe vindt de sleutel in de Thuisbord-app: Instellingen › Meterkoppeling › Meter koppelen › Home Assistant. Tik bij Jullie koppelsleutel op Kopiëren en plak hem hier.",
+        "description": "Deze integratie stuurt de meterstanden van jullie slimme meter naar Thuisbord, zodat elk scherm in huis ze laat zien. Ze leest alleen de sensoren die je kiest en bedient geen apparaten.\n\nJe krijgt de sleutel in de Thuisbord-app: Instellingen › Meterkoppeling › Meter koppelen › Home Assistant. Na Ik ga akkoord zie je hem één keer bij Jullie koppelsleutel: tik op Kopiëren en plak hem hier. Kwijt? Maak dan in de app bij Meterkoppeling een nieuwe met Nieuwe sleutel maken.",
         "data": {
           "connection_key": "Koppelsleutel"
         },
@@ -83,7 +83,7 @@
             },
             "data_description": {
               "solar_power": "W of kW. Een negatieve waarde wordt 0.",
-              "gas_total": "In m³."
+              "gas_total": "In m³ of liter."
             }
           }
         }
@@ -94,7 +94,7 @@
       },
       "reauth_confirm": {
         "title": "Nieuwe koppelsleutel nodig",
-        "description": "Thuisbord neemt geen meterstanden meer aan met de opgeslagen sleutel. Kopieer de sleutel in de Thuisbord-app (Instellingen › Meterkoppeling › Meter koppelen › Home Assistant) en plak hem hier.",
+        "description": "Thuisbord neemt geen meterstanden meer aan met de opgeslagen sleutel. Plak de nieuwe koppelsleutel. Heb je die niet, maak dan in de Thuisbord-app bij Instellingen › Meterkoppeling een nieuwe met Nieuwe sleutel maken. Is de meter losgekoppeld, koppel hem dan opnieuw bij Meter koppelen › Home Assistant en plak de sleutel die je dan krijgt.",
         "data": {
           "connection_key": "Koppelsleutel"
         },
@@ -104,7 +104,7 @@
       },
       "reconfigure": {
         "title": "Koppelsleutel wijzigen",
-        "description": "Plak de sleutel die de Thuisbord-app nu laat zien.",
+        "description": "Plak jullie nieuwe koppelsleutel. In de Thuisbord-app maak je er een bij Instellingen › Meterkoppeling met Nieuwe sleutel maken.",
         "data": {
           "connection_key": "Koppelsleutel"
         },
@@ -126,21 +126,21 @@
       }
     },
     "error": {
-      "invalid_key_format": "Dit is geen koppelsleutel van Thuisbord: die begint met thb_ en is lang. Kopieer de hele sleutel opnieuw in de Thuisbord-app.",
+      "invalid_key_format": "Dit is geen koppelsleutel van Thuisbord: die begint met thb_ en is lang. Plak de hele sleutel. Heb je hem niet meer, maak dan in de Thuisbord-app een nieuwe met Nieuwe sleutel maken.",
       "invalid_url": "Dit serveradres klopt niet. Gebruik {default_url}.",
       "insecure_url": "Het serveradres moet met https:// beginnen, want de sleutel gaat ernaartoe. Alleen een server in huis of op deze computer mag http:// gebruiken.",
-      "invalid_key": "Thuisbord kent deze koppelsleutel niet. Kopieer de sleutel opnieuw in de Thuisbord-app.",
-      "key_revoked": "In de Thuisbord-app is een nieuwe sleutel gemaakt. Plak de nieuwe sleutel.",
-      "consent_not_recorded": "Jullie hebben nog geen toestemming gegeven. Tik in de Thuisbord-app op Ik ga akkoord en plak de sleutel daarna opnieuw.",
-      "token_not_allowed": "Dit is een andere sleutel dan de koppelsleutel. Gebruik de sleutel bij Jullie koppelsleutel in de Thuisbord-app.",
-      "key_refused": "Thuisbord weigert deze sleutel. Kopieer de sleutel opnieuw in de Thuisbord-app.",
+      "invalid_key": "Thuisbord kent deze koppelsleutel niet. Controleer of je de hele sleutel plakte. Heb je hem niet meer, maak dan in de Thuisbord-app bij Meterkoppeling een nieuwe met Nieuwe sleutel maken.",
+      "key_revoked": "Deze sleutel werkt niet meer: er is in de Thuisbord-app een nieuwe gemaakt, of de meter is losgekoppeld. Plak de nieuwe sleutel. Is de meter losgekoppeld, koppel hem dan opnieuw in de app.",
+      "consent_not_recorded": "Jullie hebben nog geen toestemming gegeven. Tik in de Thuisbord-app bij Instellingen › Meterkoppeling op Meter koppelen, kies Home Assistant en tik op Ik ga akkoord; zie je Er is al een koppelsleutel, tik dan op Huidige sleutel houden. Plak de sleutel daarna hier opnieuw.",
+      "token_not_allowed": "Dit is een andere sleutel dan de koppelsleutel. Gebruik de sleutel die de Thuisbord-app bij Jullie koppelsleutel liet zien, of maak een nieuwe met Nieuwe sleutel maken.",
+      "key_refused": "Thuisbord weigert deze sleutel. Plak de hele sleutel opnieuw, of maak in de Thuisbord-app een nieuwe met Nieuwe sleutel maken.",
       "too_many_requests": "Thuisbord vraagt even te wachten. Probeer het over een minuut opnieuw.",
       "unexpected_response": "Thuisbord gaf een antwoord dat deze integratie niet kent. Werk de integratie bij via HACS.",
       "cannot_connect": "Thuisbord is niet bereikbaar. Controleer de internetverbinding van Home Assistant en probeer het opnieuw.",
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ voor gas.",
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ of liter voor gas.",
       "consent_still_missing": "Nog geen toestemming in de Thuisbord-app. Tik daar op Ik ga akkoord en probeer het opnieuw."
     },
     "abort": {
@@ -207,7 +207,7 @@
             },
             "data_description": {
               "solar_power": "W of kW. Een negatieve waarde wordt 0.",
-              "gas_total": "In m³."
+              "gas_total": "In m³ of liter."
             }
           }
         }
@@ -221,7 +221,7 @@
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ voor gas."
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, of m³ of liter voor gas."
     }
   },
   "entity": {
@@ -270,7 +270,7 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: eenheid niet herkend",
-      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, of m³ voor gas, of kies een andere sensor in de opties van de Thuisbord-integratie."
+      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, of m³ of liter voor gas, of kies een andere sensor in de opties van de Thuisbord-integratie."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: waarde kan niet kloppen",

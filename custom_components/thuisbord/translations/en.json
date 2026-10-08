@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect Thuisbord",
-        "description": "This integration sends your smart meter's readings to Thuisbord, so every screen in your home can show them. It reads only the sensors you choose and controls no devices.\n\nYou find the key in the Thuisbord app: Settings › Meter connection › Connect meter › Home Assistant. Under Your connection key, tap Copy and paste it here.",
+        "description": "This integration sends your smart meter's readings to Thuisbord, so every screen in your home can show them. It reads only the sensors you choose and controls no devices.\n\nYou get the key in the Thuisbord app: Settings › Meter connection › Connect meter › Home Assistant. After I agree, it shows once under Your connection key: tap Copy and paste it here. Lost it? Make a new one in the app under Meter connection with Make a new key.",
         "data": {
           "connection_key": "Connection key"
         },
@@ -83,7 +83,7 @@
             },
             "data_description": {
               "solar_power": "W or kW. A negative value becomes 0.",
-              "gas_total": "In m³."
+              "gas_total": "In m³ or litres."
             }
           }
         }
@@ -94,7 +94,7 @@
       },
       "reauth_confirm": {
         "title": "New connection key needed",
-        "description": "Thuisbord no longer takes readings with the saved key. Copy the key in the Thuisbord app (Settings › Meter connection › Connect meter › Home Assistant) and paste it here.",
+        "description": "Thuisbord no longer takes readings with the saved key. Paste your new connection key. If you don't have one, make one in the Thuisbord app under Settings › Meter connection with Make a new key. If the meter was disconnected, connect it again under Connect meter › Home Assistant and paste the key you get then.",
         "data": {
           "connection_key": "Connection key"
         },
@@ -104,7 +104,7 @@
       },
       "reconfigure": {
         "title": "Change the connection key",
-        "description": "Paste the key the Thuisbord app shows now.",
+        "description": "Paste your new connection key. In the Thuisbord app you make one under Settings › Meter connection with Make a new key.",
         "data": {
           "connection_key": "Connection key"
         },
@@ -126,21 +126,21 @@
       }
     },
     "error": {
-      "invalid_key_format": "This is not a Thuisbord connection key: that starts with thb_ and is long. Copy the whole key again in the Thuisbord app.",
+      "invalid_key_format": "This is not a Thuisbord connection key: that starts with thb_ and is long. Paste the whole key. If you no longer have it, make a new one in the Thuisbord app with Make a new key.",
       "invalid_url": "This server address is not right. Use {default_url}.",
       "insecure_url": "The server address must start with https://, because the key goes there. Only a server in your home or on this computer may use http://.",
-      "invalid_key": "Thuisbord does not know this connection key. Copy the key again in the Thuisbord app.",
-      "key_revoked": "Someone made a new key in the Thuisbord app. Paste the new key.",
-      "consent_not_recorded": "You have not given consent yet. In the Thuisbord app, tap I agree, then paste the key again.",
-      "token_not_allowed": "This is another key than the connection key. Use the key under Your connection key in the Thuisbord app.",
-      "key_refused": "Thuisbord refuses this key. Copy the key again in the Thuisbord app.",
+      "invalid_key": "Thuisbord does not know this connection key. Check that you pasted the whole key. If you no longer have it, make a new one in the Thuisbord app under Meter connection with Make a new key.",
+      "key_revoked": "This key no longer works: a new one was made in the Thuisbord app, or the meter was disconnected. Paste the new key. If the meter was disconnected, connect it again in the app.",
+      "consent_not_recorded": "You have not given consent yet. In the Thuisbord app, under Settings › Meter connection, tap Connect meter, choose Home Assistant and tap I agree; if you see There's already a connection key, tap Keep the current key. Then paste the key here again.",
+      "token_not_allowed": "This is another key than the connection key. Use the key the Thuisbord app showed under Your connection key, or make a new one with Make a new key.",
+      "key_refused": "Thuisbord refuses this key. Paste the whole key again, or make a new one in the Thuisbord app with Make a new key.",
       "too_many_requests": "Thuisbord asks you to wait a moment. Try again in a minute.",
       "unexpected_response": "Thuisbord gave an answer this integration does not know. Update the integration in HACS.",
       "cannot_connect": "Thuisbord cannot be reached. Check Home Assistant's internet connection and try again.",
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ for gas.",
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ or litres for gas.",
       "consent_still_missing": "No consent in the Thuisbord app yet. Tap I agree there and try again."
     },
     "abort": {
@@ -207,7 +207,7 @@
             },
             "data_description": {
               "solar_power": "W or kW. A negative value becomes 0.",
-              "gas_total": "In m³."
+              "gas_total": "In m³ or litres."
             }
           }
         }
@@ -221,7 +221,7 @@
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ for gas."
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, or m³ or litres for gas."
     }
   },
   "entity": {
@@ -270,7 +270,7 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: unit not understood",
-      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, or m³ for gas, or choose another sensor in the Thuisbord integration's options."
+      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, or m³ or litres for gas, or choose another sensor in the Thuisbord integration's options."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: impossible value",
