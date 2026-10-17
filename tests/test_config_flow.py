@@ -29,6 +29,8 @@ from custom_components.thuisbord.const import (
     CONF_POWER,
     CONF_POWER_EXPORT,
     CONF_POWER_IMPORT,
+    CONF_WATER_FLOW,
+    CONF_WATER_TOTAL,
     DEFAULT_API_URL,
     DOMAIN,
     MODE_ACTION,
@@ -51,6 +53,10 @@ ADVANCED = {"advanced": {CONF_API_URL: DEFAULT_API_URL}}
 BATTERY_LEVEL = "sensor.home_battery_state_of_charge"
 BATTERY_POWER = "sensor.home_battery_power"
 BATTERY_LIMIT = "number.home_battery_minimum_state_of_charge"
+# HomeWizard's water meter: a total with the water device class, and a flow in L/min without a
+# device class, as Home Assistant's HomeWizard integration makes them.
+WATER_TOTAL = "sensor.watermeter_total_water_usage"
+WATER_FLOW = "sensor.watermeter_water_usage"
 
 
 BATTERY_FIELDS = (
@@ -63,16 +69,19 @@ BATTERY_FIELDS = (
 
 
 def sensors_input(**chosen: Any) -> dict[str, Any]:
-    """The sensors form as the frontend sends it, with its four sections."""
+    """The sensors form as the frontend sends it, with its five sections."""
     power = {k: v for k, v in chosen.items() if k in (CONF_POWER, CONF_POWER_IMPORT, CONF_POWER_EXPORT)}
     extra = {k: v for k, v in chosen.items() if k in ("solar_power", "solar_total", "gas_total")}
     battery = {k: v for k, v in chosen.items() if k in BATTERY_FIELDS}
-    totals = {k: v for k, v in chosen.items() if k not in power and k not in extra and k not in battery}
+    water = {k: v for k, v in chosen.items() if k in (CONF_WATER_TOTAL, CONF_WATER_FLOW)}
+    placed = {**power, **extra, **battery, **water}
+    totals = {k: v for k, v in chosen.items() if k not in placed}
     return {
         "power_section": power,
         "totals_section": totals,
         "extra_section": extra,
         "battery_section": battery,
+        "water_section": water,
     }
 
 
@@ -85,6 +94,10 @@ def power_sensor(hass: HomeAssistant) -> None:
     hass.states.async_set(BATTERY_LEVEL, "64", {"unit_of_measurement": "%"})
     hass.states.async_set(BATTERY_POWER, "-2.2", {"unit_of_measurement": "kW"})
     hass.states.async_set(BATTERY_LIMIT, "20", {"unit_of_measurement": "%"})
+    hass.states.async_set(
+        WATER_TOTAL, "1523.684", {"unit_of_measurement": "m³", "device_class": "water"}
+    )
+    hass.states.async_set(WATER_FLOW, "7.5", {"unit_of_measurement": "L/min"})
 
 
 async def _to_menu(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> dict[str, Any]:
@@ -190,6 +203,46 @@ async def test_battery_sign_kept_only_with_a_battery_power_sensor(
         CONF_POWER: POWER_ENTITY,
         CONF_BATTERY_LEVEL: BATTERY_LEVEL,
     }
+
+
+async def test_sensors_with_a_water_meter(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The water section stores the total and the flow sensor, each on its own."""
+    result = await _to_menu(hass, aioclient_mock)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    with patch("custom_components.thuisbord.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            sensors_input(power=POWER_ENTITY, water_total=WATER_TOTAL, water_flow=WATER_FLOW),
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"] == {
+        CONF_MODE: MODE_SENSORS,
+        CONF_POWER: POWER_ENTITY,
+        CONF_WATER_TOTAL: WATER_TOTAL,
+        CONF_WATER_FLOW: WATER_FLOW,
+    }
+
+
+@pytest.mark.parametrize("unit", ["L/h", "m³/h", "gal/min", "mL/s"])
+async def test_water_flow_in_any_unit_home_assistant_allows(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, unit: str
+) -> None:
+    """A flow sensor in another unit of the volume_flow_rate device class is accepted alone."""
+    hass.states.async_set("sensor.water_flow", "1", {"unit_of_measurement": unit})
+    result = await _to_menu(hass, aioclient_mock)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    with patch("custom_components.thuisbord.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], sensors_input(power=POWER_ENTITY, water_flow="sensor.water_flow")
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"][CONF_WATER_FLOW] == "sensor.water_flow"
 
 
 async def test_action(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
@@ -398,6 +451,9 @@ async def test_household_already_added(
         ({CONF_POWER: POWER_ENTITY, CONF_BATTERY_LEVEL: "sensor.p1_import_t1"}, "unsupported_unit"),
         ({CONF_POWER: POWER_ENTITY, CONF_BATTERY_POWER: BATTERY_LEVEL}, "unsupported_unit"),
         ({CONF_POWER: POWER_ENTITY, CONF_BATTERY_CAPACITY: 10}, "battery_capacity_alone"),
+        ({CONF_POWER: POWER_ENTITY, CONF_WATER_TOTAL: WATER_FLOW}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_WATER_FLOW: WATER_TOTAL}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_WATER_FLOW: BATTERY_LEVEL}, "unsupported_unit"),
     ],
 )
 async def test_sensor_choice_refused(
@@ -406,8 +462,9 @@ async def test_sensor_choice_refused(
     chosen: dict[str, Any],
     error: str,
 ) -> None:
-    """Power is required, pairs go together, units must be ones Thuisbord converts, and the
-    battery's capacity needs a battery sensor."""
+    """Power is required, pairs go together, units must be ones Thuisbord converts (a volume for
+    the water total, a flow for the water flow), and the battery's capacity needs a battery
+    sensor."""
     result = await _to_menu(hass, aioclient_mock)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"next_step_id": MODE_SENSORS}
@@ -575,6 +632,35 @@ async def test_options_suggest_the_battery(hass: HomeAssistant) -> None:
         CONF_BATTERY_POWER_SIGN: SIGN_CHARGING_POSITIVE,
         CONF_BATTERY_CAPACITY: 13.5,
     }
+
+
+async def test_options_suggest_the_water_meter(hass: HomeAssistant) -> None:
+    """The options form suggests the stored water sensors again, in their own section."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Thuisbord",
+        unique_id=HOUSEHOLD,
+        data={CONF_CONNECTION_KEY: KEY, CONF_API_URL: DEFAULT_API_URL},
+        options={
+            CONF_MODE: MODE_SENSORS,
+            CONF_POWER: POWER_ENTITY,
+            CONF_WATER_TOTAL: WATER_TOTAL,
+            CONF_WATER_FLOW: WATER_FLOW,
+        },
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    schema = result["data_schema"].schema
+    water_section = next(v for k, v in schema.items() if k == "water_section")
+    suggested = {
+        str(key): key.description.get("suggested_value")
+        for key in water_section.schema.schema
+        if key.description
+    }
+    assert suggested == {CONF_WATER_TOTAL: WATER_TOTAL, CONF_WATER_FLOW: WATER_FLOW}
 
 
 async def test_options_switch_to_action(

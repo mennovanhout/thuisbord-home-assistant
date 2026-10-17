@@ -18,6 +18,11 @@ A reading holds the fields of `Reading` in the Thuisbord API contract and nothin
   power sensor reads, by Home Assistant's energy dashboard convention, positive while discharging,
   so its sign is turned unless the household says it is positive while charging. The capacity is
   a number the household enters, and goes along only with another battery value.
+- a water meter, which Thuisbord shows and never controls, volume only, each field optional on its
+  own: `water_total_m3` as text with three decimals (a litre), like gas, and `water_flow_lpm`, the
+  water flowing now in litres a minute, as text with one decimal, from 0 to 100. The total is
+  converted from every unit the `water` device class allows, the flow from every unit the
+  `volume_flow_rate` device class allows, in decimals.
 
 A value that is unknown or unavailable is left out, never sent as null or 0. Nothing in this
 module logs: values never reach the log.
@@ -49,6 +54,8 @@ from .const import (
     CONF_POWER_IMPORT,
     CONF_SOLAR_POWER,
     CONF_SOLAR_TOTAL,
+    CONF_WATER_FLOW,
+    CONF_WATER_TOTAL,
     SIGN_CHARGING_POSITIVE,
     SIGN_DISCHARGING_POSITIVE,
 )
@@ -62,6 +69,9 @@ THOUSANDTH: Final = Decimal("0.001")
 PERCENT_LIMIT: Final = 100
 # BatteryCapacityKwh: above 0 and at most 1000 kWh.
 CAPACITY_LIMIT: Final = Decimal(1000)
+# WaterFlowLpm: from 0 to 100 litres a minute, with one decimal.
+FLOW_LIMIT: Final = Decimal(100)
+TENTH: Final = Decimal("0.1")
 
 # The units each kind of sensor may report, and the factor to the contract's unit.
 # Decimal factors, not Home Assistant's float converters, so a meter's three decimals arrive
@@ -75,6 +85,35 @@ POWER_UNITS: Final = {
 ENERGY_UNITS: Final = {"Wh": Decimal("0.001"), "kWh": Decimal(1), "MWh": Decimal(1000)}
 GAS_UNITS: Final = {"L": Decimal("0.001"), "m³": Decimal(1)}
 PERCENT_UNITS: Final = {"%": Decimal(1)}
+
+# A US gallon is 231 cubic inches and a cubic foot 0.3048³ m³, both exact by definition; Home
+# Assistant's VolumeConverter takes `gal` as a US gallon.
+GALLON_M3: Final = Decimal("0.003785411784")
+CUBIC_FOOT_M3: Final = Decimal("0.028316846592")
+# The units of the `water` device class, to m³.
+WATER_UNITS: Final = {
+    "L": Decimal("0.001"),
+    "gal": GALLON_M3,
+    "m³": Decimal(1),
+    "ft³": CUBIC_FOOT_M3,
+    "CCF": 100 * CUBIC_FOOT_M3,
+    "MCF": 1000 * CUBIC_FOOT_M3,
+}
+# The units of the `volume_flow_rate` device class, as a multiplier and a divisor to litres a
+# minute, so that units per hour or per day convert exactly too: m³/h is 1000 L / 60 min.
+FLOW_UNITS: Final = {
+    "mL/s": (Decimal(60), Decimal(1000)),
+    "L/s": (Decimal(60), Decimal(1)),
+    "L/min": (Decimal(1), Decimal(1)),
+    "L/h": (Decimal(1), Decimal(60)),
+    "m³/s": (Decimal(60000), Decimal(1)),
+    "m³/min": (Decimal(1000), Decimal(1)),
+    "m³/h": (Decimal(1000), Decimal(60)),
+    "ft³/min": (1000 * CUBIC_FOOT_M3, Decimal(1)),
+    "gal/min": (1000 * GALLON_M3, Decimal(1)),
+    "gal/h": (1000 * GALLON_M3, Decimal(60)),
+    "gal/d": (1000 * GALLON_M3, Decimal(1440)),
+}
 
 # The battery's percentages, each from its own sensor.
 BATTERY_PERCENTS: Final = (
@@ -117,6 +156,8 @@ READING_FIELDS: Final = (
     "battery_level_pct",
     "battery_limit_pct",
     "battery_capacity_kwh",
+    "water_total_m3",
+    "water_flow_lpm",
 )
 
 TARIFF_WORDS: Final = {"1": 1, "low": 1, "2": 2, "normal": 2}
@@ -196,6 +237,16 @@ def _format_total(value: Decimal) -> str | None:
     return f"{rounded:.3f}"
 
 
+def format_flow(value: Decimal) -> str | None:
+    """Return a flow as text with exactly one decimal, or None unless from 0 to 100."""
+    rounded = value.quantize(TENTH, rounding=ROUND_HALF_UP)
+    if rounded < 0 or rounded > FLOW_LIMIT:
+        return None
+    if rounded == 0:
+        rounded = Decimal("0.0")
+    return f"{rounded:.1f}"
+
+
 def _watts(value: Decimal) -> int:
     return int(value.quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
@@ -231,11 +282,13 @@ class _Reader:
         self.states = states
         self.problems: list[Problem] = []
 
-    def value(self, sensor: str, units: Mapping[str, Decimal]) -> Decimal | None:
+    def value(
+        self, sensor: str, units: Mapping[str, Decimal] | Mapping[str, tuple[Decimal, Decimal]]
+    ) -> Decimal | None:
         """Return the sensor's value in the contract's unit, or None when it has none now.
 
-        A sensor that is not chosen is absent from `states`; one that no longer exists maps to
-        None.
+        `units` maps each unit to a factor, or to a multiplier and a divisor. A sensor that is not
+        chosen is absent from `states`; one that no longer exists maps to None.
         """
         if sensor not in self.states:
             return None
@@ -250,6 +303,9 @@ class _Reader:
         if factor is None:
             self.problems.append(Problem(sensor, Reason.UNIT))
             return None
+        if isinstance(factor, tuple):
+            multiplier, divisor = factor
+            return number * multiplier / divisor
         return number * factor
 
     def tariff(self) -> int | None:
@@ -363,6 +419,21 @@ def build_reading(
         if text is not None:
             reading["battery_capacity_kwh"] = text
 
+    water = reader.value(CONF_WATER_TOTAL, WATER_UNITS)
+    if water is not None:
+        text = _format_total(water)
+        if text is None:
+            reader.problems.append(Problem(CONF_WATER_TOTAL, Reason.OUT_OF_RANGE))
+        else:
+            reading["water_total_m3"] = text
+    flow = reader.value(CONF_WATER_FLOW, FLOW_UNITS)
+    if flow is not None:
+        text = format_flow(flow)
+        if text is None:
+            reader.problems.append(Problem(CONF_WATER_FLOW, Reason.OUT_OF_RANGE))
+        else:
+            reading["water_flow_lpm"] = text
+
     problems = tuple(reader.problems)
     if power is None:
         return Built(None, problems)
@@ -375,10 +446,11 @@ def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> 
     """Build one reading from the fields of an action call.
 
     `values` uses the reading's own field names, and the battery's power is already in Thuisbord's
-    sign, positive while charging. Raises InvalidReading, naming the field, when a value cannot be
-    sent; never silently changes what the household asked to send, except that totals and the
-    capacity are written with three decimals, percentages are rounded to whole percent, and a
-    negative solar power becomes 0.
+    sign, positive while charging; the water total is in m³ and the flow in litres a minute.
+    Raises InvalidReading, naming the field, when a value cannot be sent; never silently changes
+    what the household asked to send, except that totals and the capacity are written with three
+    decimals, the water flow with one, percentages are rounded to whole percent, and a negative
+    solar power becomes 0.
     """
     reading: Reading = {"measured_at": format_measured_at(measured_at)}
 
@@ -390,7 +462,7 @@ def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> 
         raise InvalidReading("active_power_w", "out_of_range")
     reading["active_power_w"] = watts
 
-    for field in (*(field for _, field in ENERGY_TOTALS), "gas_total_m3"):
+    for field in (*(field for _, field in ENERGY_TOTALS), "gas_total_m3", "water_total_m3"):
         if values.get(field) is None:
             continue
         number = _number(str(values[field]))
@@ -438,6 +510,13 @@ def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> 
         if text is None:
             raise InvalidReading("battery_capacity_kwh", "out_of_range")
         reading["battery_capacity_kwh"] = text
+
+    if values.get("water_flow_lpm") is not None:
+        number = _number(str(values["water_flow_lpm"]))
+        text = None if number is None else format_flow(number)
+        if text is None:
+            raise InvalidReading("water_flow_lpm", "out_of_range")
+        reading["water_flow_lpm"] = text
 
     return _ordered(reading)
 

@@ -23,6 +23,8 @@ from custom_components.thuisbord.const import (
     CONF_POWER_IMPORT,
     CONF_SOLAR_POWER,
     CONF_SOLAR_TOTAL,
+    CONF_WATER_FLOW,
+    CONF_WATER_TOTAL,
     SIGN_CHARGING_POSITIVE,
     SIGN_DISCHARGING_POSITIVE,
 )
@@ -208,15 +210,148 @@ def test_zero_total() -> None:
     assert built.reading["export_t2_kwh"] == "0.000"
 
 
-def test_reading_fields_end_with_the_battery() -> None:
-    """The battery's four fields follow gas, in the contract's order (0.11.0)."""
-    assert READING_FIELDS[-5:] == (
+def test_reading_fields_end_with_the_battery_and_the_water_meter() -> None:
+    """The battery's four fields follow gas (0.11.0), and the water meter's two follow them
+    (0.19.0), in the contract's order."""
+    assert READING_FIELDS[-7:] == (
         "gas_total_m3",
         "battery_power_w",
         "battery_level_pct",
         "battery_limit_pct",
         "battery_capacity_kwh",
+        "water_total_m3",
+        "water_flow_lpm",
     )
+
+
+def test_water_meter_matches_the_contract_example() -> None:
+    """The contract's 'water' example (0.19.0): 1523.684 m³, and 7.5 litres a minute now."""
+    built = build_reading(
+        AT,
+        {
+            CONF_POWER: SensorState("612", "W"),
+            CONF_IMPORT_TOTAL: SensorState("8105.012", "kWh"),
+            CONF_GAS_TOTAL: SensorState("2911.64", "m³"),
+            CONF_WATER_TOTAL: SensorState("1523.684", "m³"),
+            CONF_WATER_FLOW: SensorState("7.5", "L/min"),
+        },
+    )
+    assert built.problems == ()
+    assert built.reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 612,
+        "import_total_kwh": "8105.012",
+        "gas_total_m3": "2911.640",
+        "water_total_m3": "1523.684",
+        "water_flow_lpm": "7.5",
+    }
+    assert list(built.reading) == [f for f in READING_FIELDS if f in built.reading]
+
+
+@pytest.mark.parametrize(
+    ("raw", "unit", "total"),
+    [
+        ("1523.684", "m³", "1523.684"),
+        ("1523684", "L", "1523.684"),
+        ("1523683.6", "L", "1523.684"),
+        ("1000", "gal", "3.785"),
+        ("1", "gal", "0.004"),
+        ("100", "ft³", "2.832"),
+        ("1", "CCF", "2.832"),
+        ("1", "MCF", "28.317"),
+        ("0", "m³", "0.000"),
+    ],
+)
+def test_water_total_in_every_unit_of_the_water_device_class(
+    raw: str, unit: str, total: str
+) -> None:
+    """The water total is converted to m³ exactly and written with three decimals, a litre.
+
+    A US gallon is 0.003785411784 m³ and a cubic foot 0.028316846592 m³: 1000 gal is 3.785411784 m³,
+    100 ft³ and 1 CCF are 2.8316846592 m³, 1 MCF is 28.316846592 m³.
+    """
+    built = build_reading(AT, {CONF_POWER: POWER_840, CONF_WATER_TOTAL: SensorState(raw, unit)})
+    assert built.problems == ()
+    assert built.reading is not None
+    assert built.reading["water_total_m3"] == total
+
+
+@pytest.mark.parametrize(
+    ("raw", "unit", "flow"),
+    [
+        ("7.5", "L/min", "7.5"),
+        ("7.45", "L/min", "7.5"),
+        ("7.44", "L/min", "7.4"),
+        ("12", "L/min", "12.0"),
+        ("450", "L/h", "7.5"),
+        ("153", "L/h", "2.6"),
+        ("0.125", "L/s", "7.5"),
+        ("125", "mL/s", "7.5"),
+        ("0.45", "m³/h", "7.5"),
+        ("0.0075", "m³/min", "7.5"),
+        ("0.000125", "m³/s", "7.5"),
+        ("0.264", "ft³/min", "7.5"),
+        ("2", "gal/min", "7.6"),
+        ("120", "gal/h", "7.6"),
+        ("2880", "gal/d", "7.6"),
+        ("0", "L/min", "0.0"),
+        ("-0.04", "L/min", "0.0"),
+        ("100", "L/min", "100.0"),
+        ("6", "m³/h", "100.0"),
+    ],
+)
+def test_water_flow_in_every_unit_of_the_volume_flow_rate_device_class(
+    raw: str, unit: str, flow: str
+) -> None:
+    """The flow is converted to litres a minute in decimals and written with one decimal.
+
+    153 L/h is 2.55 L/min exactly, which rounds half up to 2.6; 0.264 ft³/min is 7.4756... L/min;
+    2 gal/min, 120 gal/h and 2880 gal/d are all 7.570823568 L/min; 6 m³/h is 100 L/min.
+    """
+    built = build_reading(AT, {CONF_POWER: POWER_840, CONF_WATER_FLOW: SensorState(raw, unit)})
+    assert built.problems == ()
+    assert built.reading is not None
+    assert built.reading["water_flow_lpm"] == flow
+
+
+@pytest.mark.parametrize(
+    ("sensor", "state", "reason"),
+    [
+        (CONF_WATER_FLOW, SensorState("100.05", "L/min"), Reason.OUT_OF_RANGE),
+        (CONF_WATER_FLOW, SensorState("6.1", "m³/h"), Reason.OUT_OF_RANGE),
+        (CONF_WATER_FLOW, SensorState("-0.5", "L/min"), Reason.OUT_OF_RANGE),
+        (CONF_WATER_FLOW, SensorState("7.5", None), Reason.UNIT),
+        (CONF_WATER_FLOW, SensorState("7.5", "L"), Reason.UNIT),
+        (CONF_WATER_TOTAL, SensorState("-1", "m³"), Reason.OUT_OF_RANGE),
+        (CONF_WATER_TOTAL, SensorState("1000000", "m³"), Reason.OUT_OF_RANGE),
+        (CONF_WATER_TOTAL, SensorState("1523684", "mL"), Reason.UNIT),
+        (CONF_WATER_TOTAL, SensorState("1523.684", "L/min"), Reason.UNIT),
+    ],
+)
+def test_unusable_water_value_is_left_out(sensor: str, state: SensorState, reason: Reason) -> None:
+    """A water value that cannot be right is left out and named; power still goes."""
+    built = build_reading(AT, {CONF_POWER: POWER_840, sensor: state})
+    assert built.reading == {"measured_at": "2026-10-06T21:15:40Z", "active_power_w": 840}
+    assert built.problems == (Problem(sensor, reason),)
+
+
+@pytest.mark.parametrize("value", ["unknown", "unavailable", ""])
+def test_water_without_a_value_is_left_out_quietly(value: str) -> None:
+    """A water sensor without a value now is left out, and is no problem; the other one goes."""
+    built = build_reading(
+        AT,
+        {
+            CONF_POWER: POWER_840,
+            CONF_WATER_TOTAL: SensorState(value, "m³"),
+            CONF_WATER_FLOW: SensorState("0", "L/min"),
+        },
+    )
+    assert built.problems == ()
+    assert built.reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 840,
+        "water_flow_lpm": "0.0",
+    }
 
 
 def test_battery_in_the_energy_dashboard_sign() -> None:
@@ -323,6 +458,22 @@ def test_action_battery_values() -> None:
     }
 
 
+def test_action_water_values() -> None:
+    """The action takes the water total in m³ and the flow in litres a minute."""
+    reading = reading_from_values(
+        AT,
+        {"active_power_w": 120, "water_total_m3": "1523.68", "water_flow_lpm": 7.45},
+    )
+    assert reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 120,
+        "water_total_m3": "1523.680",
+        "water_flow_lpm": "7.5",
+    }
+    reading = reading_from_values(AT, {"active_power_w": 1, "water_flow_lpm": 0})
+    assert reading["water_flow_lpm"] == "0.0"
+
+
 def test_action_values() -> None:
     """Numbers from the automation editor become the contract's fields."""
     reading = reading_from_values(
@@ -362,6 +513,11 @@ def test_action_values() -> None:
         ({"active_power_w": 1, "battery_capacity_kwh": 0}, "battery_capacity_kwh", "out_of_range"),
         ({"active_power_w": 1, "battery_capacity_kwh": "0.0004"}, "battery_capacity_kwh", "out_of_range"),
         ({"active_power_w": 1, "battery_capacity_kwh": 1000.001}, "battery_capacity_kwh", "out_of_range"),
+        ({"active_power_w": 1, "water_total_m3": -1}, "water_total_m3", "out_of_range"),
+        ({"active_power_w": 1, "water_total_m3": 1000000}, "water_total_m3", "out_of_range"),
+        ({"active_power_w": 1, "water_flow_lpm": 100.05}, "water_flow_lpm", "out_of_range"),
+        ({"active_power_w": 1, "water_flow_lpm": -0.5}, "water_flow_lpm", "out_of_range"),
+        ({"active_power_w": 1, "water_flow_lpm": "veel"}, "water_flow_lpm", "out_of_range"),
     ],
 )
 def test_action_values_refused(values: dict, field: str, code: str) -> None:

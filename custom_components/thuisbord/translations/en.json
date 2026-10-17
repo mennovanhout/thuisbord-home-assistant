@@ -103,12 +103,24 @@
               "battery_limit": "The limit set in the battery, usually the reserve it keeps, in %. A sensor or a number entity.",
               "battery_capacity": "The usable capacity in kWh, as your battery's specifications give it. Goes along only with a battery sensor above."
             }
+          },
+          "water_section": {
+            "name": "Water meter (optional)",
+            "description": "Thuisbord shows your water meter: how much water is flowing now and how many litres you used today. Volume only; Thuisbord puts no price on water. A reader on batteries passes its data on only a few times a day; the flow and the water curve are then not live.",
+            "data": {
+              "water_total": "Water total",
+              "water_flow": "Water flow"
+            },
+            "data_description": {
+              "water_total": "The water meter's total, in m³, litres or another volume unit, such as HomeWizard's Total water usage.",
+              "water_flow": "How much water is flowing now, in L/min, m³/h or another flow unit, such as HomeWizard's Water usage."
+            }
           }
         }
       },
       "action": {
         "title": "Make your own automation",
-        "description": "Home Assistant then reads no sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas and your home battery. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped."
+        "description": "Home Assistant then reads no sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas, your home battery and your water meter. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped."
       },
       "reauth_confirm": {
         "title": "New connection key needed",
@@ -158,7 +170,7 @@
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, or % for the battery's charge level and limit.",
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery's charge level and limit, a volume such as m³ or litres for the water total, or a flow such as L/min or m³/h for the water flow.",
       "consent_still_missing": "No consent in the Thuisbord app yet. Tap I agree there and try again.",
       "battery_capacity_alone": "The capacity only goes along with the battery's charge level, power or limit. Choose one of those sensors too, or leave Capacity empty."
     },
@@ -246,19 +258,31 @@
               "battery_limit": "The limit set in the battery, usually the reserve it keeps, in %. A sensor or a number entity.",
               "battery_capacity": "The usable capacity in kWh, as your battery's specifications give it. Goes along only with a battery sensor above."
             }
+          },
+          "water_section": {
+            "name": "Water meter (optional)",
+            "description": "Thuisbord shows your water meter: how much water is flowing now and how many litres you used today. Volume only; Thuisbord puts no price on water. A reader on batteries passes its data on only a few times a day; the flow and the water curve are then not live.",
+            "data": {
+              "water_total": "Water total",
+              "water_flow": "Water flow"
+            },
+            "data_description": {
+              "water_total": "The water meter's total, in m³, litres or another volume unit, such as HomeWizard's Total water usage.",
+              "water_flow": "How much water is flowing now, in L/min, m³/h or another flow unit, such as HomeWizard's Water usage."
+            }
           }
         }
       },
       "action": {
         "title": "Make your own automation",
-        "description": "Home Assistant then no longer reads sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas and your home battery."
+        "description": "Home Assistant then no longer reads sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas, your home battery and your water meter."
       }
     },
     "error": {
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, or % for the battery's charge level and limit.",
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery's charge level and limit, a volume such as m³ or litres for the water total, or a flow such as L/min or m³/h for the water flow.",
       "battery_capacity_alone": "The capacity only goes along with the battery's charge level, power or limit. Choose one of those sensors too, or leave Capacity empty."
     }
   },
@@ -308,7 +332,7 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: unit not understood",
-      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, m³ or litres for gas, or % for the battery, or choose another sensor in the Thuisbord integration's options."
+      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery, a volume such as m³ for the water total or a flow such as L/min for the water flow, or choose another sensor in the Thuisbord integration's options."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: impossible value",
@@ -387,6 +411,14 @@
         "battery_capacity_kwh": {
           "name": "Capacity",
           "description": "The battery's usable capacity, in kWh."
+        },
+        "water_total_m3": {
+          "name": "Water total",
+          "description": "In m³."
+        },
+        "water_flow_lpm": {
+          "name": "Water flow",
+          "description": "How much water is flowing now, in litres a minute, from 0 to 100."
         }
       },
       "sections": {
@@ -398,6 +430,9 @@
         },
         "battery": {
           "name": "Home battery"
+        },
+        "water": {
+          "name": "Water meter"
         }
       }
     }

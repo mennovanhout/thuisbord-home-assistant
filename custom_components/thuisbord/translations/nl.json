@@ -103,12 +103,24 @@
               "battery_limit": "De grens die in de batterij is ingesteld, meestal de reserve die ze vasthoudt, in %. Een sensor of een getal-entiteit.",
               "battery_capacity": "De bruikbare capaciteit in kWh, zoals in de gegevens van jullie batterij. Gaat alleen mee met een batterijsensor hierboven."
             }
+          },
+          "water_section": {
+            "name": "Watermeter (optioneel)",
+            "description": "Thuisbord laat jullie watermeter zien: hoeveel water er nu stroomt en hoeveel liter jullie vandaag gebruikten. Alleen het volume; Thuisbord zet geen prijs op water. Een lezer op batterijen geeft zijn gegevens maar een paar keer per dag door; dan zijn de doorstroming en de watercurve niet live.",
+            "data": {
+              "water_total": "Watermeterstand",
+              "water_flow": "Waterdoorstroming"
+            },
+            "data_description": {
+              "water_total": "Het totaal van de watermeter, in m³, liter of een andere volume-eenheid, zoals Total water usage van HomeWizard.",
+              "water_flow": "Hoeveel water er nu stroomt, in L/min, m³/h of een andere doorstroomeenheid, zoals Water usage van HomeWizard."
+            }
           }
         }
       },
       "action": {
         "title": "Zelf een automatisering maken",
-        "description": "Home Assistant leest dan zelf geen sensoren. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas en jullie thuisbatterij. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen."
+        "description": "Home Assistant leest dan zelf geen sensoren. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas, jullie thuisbatterij en jullie watermeter. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen."
       },
       "reauth_confirm": {
         "title": "Nieuwe koppelsleutel nodig",
@@ -158,7 +170,7 @@
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, of % voor het laadniveau en de grens van de batterij.",
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor het laadniveau en de grens van de batterij, een volume zoals m³ of liter voor de watermeterstand, of een doorstroming zoals L/min of m³/h voor de waterdoorstroming.",
       "consent_still_missing": "Nog geen toestemming in de Thuisbord-app. Tik daar op Ik ga akkoord en probeer het opnieuw.",
       "battery_capacity_alone": "De capaciteit gaat alleen mee met het laadniveau, het vermogen of de grens van de batterij. Kies ook een van die sensoren, of laat Capaciteit leeg."
     },
@@ -246,19 +258,31 @@
               "battery_limit": "De grens die in de batterij is ingesteld, meestal de reserve die ze vasthoudt, in %. Een sensor of een getal-entiteit.",
               "battery_capacity": "De bruikbare capaciteit in kWh, zoals in de gegevens van jullie batterij. Gaat alleen mee met een batterijsensor hierboven."
             }
+          },
+          "water_section": {
+            "name": "Watermeter (optioneel)",
+            "description": "Thuisbord laat jullie watermeter zien: hoeveel water er nu stroomt en hoeveel liter jullie vandaag gebruikten. Alleen het volume; Thuisbord zet geen prijs op water. Een lezer op batterijen geeft zijn gegevens maar een paar keer per dag door; dan zijn de doorstroming en de watercurve niet live.",
+            "data": {
+              "water_total": "Watermeterstand",
+              "water_flow": "Waterdoorstroming"
+            },
+            "data_description": {
+              "water_total": "Het totaal van de watermeter, in m³, liter of een andere volume-eenheid, zoals Total water usage van HomeWizard.",
+              "water_flow": "Hoeveel water er nu stroomt, in L/min, m³/h of een andere doorstroomeenheid, zoals Water usage van HomeWizard."
+            }
           }
         }
       },
       "action": {
         "title": "Zelf een automatisering maken",
-        "description": "Home Assistant leest dan zelf geen sensoren meer. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas en jullie thuisbatterij."
+        "description": "Home Assistant leest dan zelf geen sensoren meer. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas, jullie thuisbatterij en jullie watermeter."
       }
     },
     "error": {
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, of % voor het laadniveau en de grens van de batterij.",
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor het laadniveau en de grens van de batterij, een volume zoals m³ of liter voor de watermeterstand, of een doorstroming zoals L/min of m³/h voor de waterdoorstroming.",
       "battery_capacity_alone": "De capaciteit gaat alleen mee met het laadniveau, het vermogen of de grens van de batterij. Kies ook een van die sensoren, of laat Capaciteit leeg."
     }
   },
@@ -308,7 +332,7 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: eenheid niet herkend",
-      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, m³ of liter voor gas, of % voor de batterij, of kies een andere sensor in de opties van de Thuisbord-integratie."
+      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor de batterij, een volume zoals m³ voor de watermeterstand of een doorstroming zoals L/min voor de waterdoorstroming, of kies een andere sensor in de opties van de Thuisbord-integratie."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: waarde kan niet kloppen",
@@ -387,6 +411,14 @@
         "battery_capacity_kwh": {
           "name": "Capaciteit",
           "description": "De bruikbare capaciteit van de batterij, in kWh."
+        },
+        "water_total_m3": {
+          "name": "Watermeterstand",
+          "description": "In m³."
+        },
+        "water_flow_lpm": {
+          "name": "Waterdoorstroming",
+          "description": "Hoeveel water er nu stroomt, in liter per minuut, van 0 tot 100."
         }
       },
       "sections": {
@@ -398,6 +430,9 @@
         },
         "battery": {
           "name": "Thuisbatterij"
+        },
+        "water": {
+          "name": "Watermeter"
         }
       }
     }

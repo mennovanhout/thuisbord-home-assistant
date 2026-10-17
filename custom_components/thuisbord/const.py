@@ -36,8 +36,12 @@ CONF_GAS_TOTAL: Final = "gas_total"
 CONF_BATTERY_LEVEL: Final = "battery_level"
 CONF_BATTERY_POWER: Final = "battery_power"
 CONF_BATTERY_LIMIT: Final = "battery_limit"
+# A water meter, which Thuisbord shows and never controls: volume only, no price.
+CONF_WATER_TOTAL: Final = "water_total"
+CONF_WATER_FLOW: Final = "water_flow"
 
 BATTERY_SENSORS: Final = (CONF_BATTERY_LEVEL, CONF_BATTERY_POWER, CONF_BATTERY_LIMIT)
+WATER_SENSORS: Final = (CONF_WATER_TOTAL, CONF_WATER_FLOW)
 POWER_SENSORS: Final = (CONF_POWER, CONF_POWER_IMPORT, CONF_POWER_EXPORT)
 OPTIONAL_SENSORS: Final = (
     CONF_IMPORT_TOTAL,
@@ -51,6 +55,7 @@ OPTIONAL_SENSORS: Final = (
     CONF_SOLAR_TOTAL,
     CONF_GAS_TOTAL,
     *BATTERY_SENSORS,
+    *WATER_SENSORS,
 )
 ALL_SENSORS: Final = POWER_SENSORS + OPTIONAL_SENSORS
 

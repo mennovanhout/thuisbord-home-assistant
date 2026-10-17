@@ -65,14 +65,24 @@ from .const import (
     CONF_POWER_IMPORT,
     CONF_SOLAR_POWER,
     CONF_SOLAR_TOTAL,
+    CONF_WATER_FLOW,
+    CONF_WATER_TOTAL,
     DEFAULT_API_URL,
     DOMAIN,
     MODE_ACTION,
     MODE_SENSORS,
     SENSOR_PAIRS,
     SIGN_DISCHARGING_POSITIVE,
+    WATER_SENSORS,
 )
-from .reading import ENERGY_UNITS, GAS_UNITS, PERCENT_UNITS, POWER_UNITS
+from .reading import (
+    ENERGY_UNITS,
+    FLOW_UNITS,
+    GAS_UNITS,
+    PERCENT_UNITS,
+    POWER_UNITS,
+    WATER_UNITS,
+)
 
 # The contract's pattern for a connection key (api/openapi.yaml, connectionKey). The UUID part
 # names the household and becomes the entry's unique ID.
@@ -85,7 +95,14 @@ SECTION_POWER: Final = "power_section"
 SECTION_TOTALS: Final = "totals_section"
 SECTION_EXTRA: Final = "extra_section"
 SECTION_BATTERY: Final = "battery_section"
-SENSOR_SECTIONS: Final = (SECTION_POWER, SECTION_TOTALS, SECTION_EXTRA, SECTION_BATTERY)
+SECTION_WATER: Final = "water_section"
+SENSOR_SECTIONS: Final = (
+    SECTION_POWER,
+    SECTION_TOTALS,
+    SECTION_EXTRA,
+    SECTION_BATTERY,
+    SECTION_WATER,
+)
 
 # Which units each chosen sensor may report. The sensor selector already filters on device
 # class; this catches a sensor whose unit Thuisbord cannot convert.
@@ -105,6 +122,8 @@ SENSOR_UNITS: Final = {
     CONF_EXPORT_T2: ENERGY_UNITS,
     CONF_SOLAR_TOTAL: ENERGY_UNITS,
     CONF_GAS_TOTAL: GAS_UNITS,
+    CONF_WATER_TOTAL: WATER_UNITS,
+    CONF_WATER_FLOW: FLOW_UNITS,
 }
 
 # The error shown for each refusal code of the contract.
@@ -248,7 +267,12 @@ def _entity(device_class: SensorDeviceClass | None = None) -> EntitySelector:
 
 
 def sensors_schema() -> vol.Schema:
-    """The form for choosing sensors: power, totals and tariff, solar and gas, a home battery."""
+    """The form for choosing sensors: power, totals, tariff, solar, gas, battery and water.
+
+    The water flow sensor is not filtered on a device class: HomeWizard's water meter, for one,
+    reports its flow in L/min without the `volume_flow_rate` device class. Its unit is checked
+    instead.
+    """
     power = _entity(SensorDeviceClass.POWER)
     energy = _entity(SensorDeviceClass.ENERGY)
     return vol.Schema(
@@ -300,6 +324,15 @@ def sensors_schema() -> vol.Schema:
                 ),
                 {"collapsed": True},
             ),
+            vol.Required(SECTION_WATER): section(
+                vol.Schema(
+                    {
+                        vol.Optional(CONF_WATER_TOTAL): _entity(SensorDeviceClass.WATER),
+                        vol.Optional(CONF_WATER_FLOW): _entity(),
+                    }
+                ),
+                {"collapsed": True},
+            ),
         }
     )
 
@@ -340,6 +373,8 @@ def nest_sensors(options: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             sections[SECTION_EXTRA][key] = value
         elif key in BATTERY_SENSORS:
             sections[SECTION_BATTERY][key] = value
+        elif key in WATER_SENSORS:
+            sections[SECTION_WATER][key] = value
         else:
             sections[SECTION_TOTALS][key] = value
     for key in (CONF_BATTERY_POWER_SIGN, CONF_BATTERY_CAPACITY):

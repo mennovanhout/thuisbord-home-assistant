@@ -107,3 +107,24 @@ send_reading:
               step: 0.001
               unit_of_measurement: kWh
               mode: box
+    water:
+      collapsed: true
+      fields:
+        water_total_m3:
+          example: "1523.684"
+          selector:
+            number:
+              min: 0
+              max: 999999.999
+              step: 0.001
+              unit_of_measurement: m³
+              mode: box
+        water_flow_lpm:
+          example: "7.5"
+          selector:
+            number:
+              min: 0
+              max: 100
+              step: 0.1
+              unit_of_measurement: L/min
+              mode: box
