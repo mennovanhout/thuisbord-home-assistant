@@ -106,7 +106,7 @@
           },
           "water_section": {
             "name": "Water meter (optional)",
-            "description": "Thuisbord shows your water meter: how much water is flowing now and how many litres you used today. Volume only; Thuisbord puts no price on water. A reader on batteries passes its data on only a few times a day; the flow and the water curve are then not live. With such a reader, leave Water flow empty, so Thuisbord shows the litres from the total and never a flow from hours ago.",
+            "description": "Thuisbord shows your water meter: how much water is flowing now and how many litres you used today. Volume only; Thuisbord puts no price on water. A reader on batteries passes its data on only a few times a day; the flow and the water curve are then not live. With a reader on batteries, leave Water flow empty, so Thuisbord shows the litres from the total and never a flow from hours ago.",
             "data": {
               "water_total": "Water total",
               "water_flow": "Water flow"
@@ -261,7 +261,7 @@
           },
           "water_section": {
             "name": "Water meter (optional)",
-            "description": "Thuisbord shows your water meter: how much water is flowing now and how many litres you used today. Volume only; Thuisbord puts no price on water. A reader on batteries passes its data on only a few times a day; the flow and the water curve are then not live. With such a reader, leave Water flow empty, so Thuisbord shows the litres from the total and never a flow from hours ago.",
+            "description": "Thuisbord shows your water meter: how much water is flowing now and how many litres you used today. Volume only; Thuisbord puts no price on water. A reader on batteries passes its data on only a few times a day; the flow and the water curve are then not live. With a reader on batteries, leave Water flow empty, so Thuisbord shows the litres from the total and never a flow from hours ago.",
             "data": {
               "water_total": "Water total",
               "water_flow": "Water flow"

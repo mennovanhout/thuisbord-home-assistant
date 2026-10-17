@@ -32,7 +32,7 @@ Thuisbord laat een watermeter zien: hoeveel water er nu stroomt en hoeveel liter
 - **Watermeterstand**: het totaal van de watermeter, zoals **Total water usage** van HomeWizard of **Water consumption** van DSMR. Elke eenheid van de apparaatklasse water: m³, liter, gallon, ft³, CCF of MCF. Thuisbord krijgt m³, tot op de liter.
 - **Waterdoorstroming**: hoeveel water er nu stroomt, zoals **Water usage** van HomeWizard. Elke doorstroomeenheid van Home Assistant, zoals L/min, L/h of m³/h. Thuisbord krijgt liter per minuut, met één decimaal, van 0 tot 100. Dit veld filtert niet op apparaatklasse, want de doorstroomsensor van HomeWizard heeft er geen; de integratie controleert de eenheid.
 
-Elke waarde is optioneel. Een watermeterlezer op batterijen, zoals die van HomeWizard in batterijstand, geeft zijn gegevens maar een paar keer per dag door; dan volgen de doorstroming en de watercurve op het scherm die momenten en zijn ze niet live. Een lezer op netstroom is wel live. Laat bij zo'n lezer **Waterdoorstroming** leeg, dan toont Thuisbord de liters uit de meterstand en nooit een doorstroming van uren geleden.
+Elke waarde is optioneel. Een watermeterlezer op batterijen, zoals die van HomeWizard in batterijstand, geeft zijn gegevens maar een paar keer per dag door; dan volgen de doorstroming en de watercurve op het scherm die momenten en zijn ze niet live. Een lezer op netstroom is wel live. Laat bij een lezer op batterijen **Waterdoorstroming** leeg, dan toont Thuisbord de liters uit de meterstand en nooit een doorstroming van uren geleden.
 
 ### Installeren via HACS
 
@@ -79,7 +79,7 @@ Thuisbord shows a water meter: how much water is flowing now and how many litres
 - **Water total**: the water meter's total, such as HomeWizard's **Total water usage** or DSMR's **Water consumption**. Any unit of the water device class: m³, litres, gallons, ft³, CCF or MCF. Thuisbord receives m³, to the litre.
 - **Water flow**: how much water is flowing now, such as HomeWizard's **Water usage**. Any flow unit Home Assistant has, such as L/min, L/h or m³/h. Thuisbord receives litres a minute, with one decimal, from 0 to 100. This field does not filter on a device class, because HomeWizard's flow sensor has none; the integration checks the unit.
 
-Every value is optional. A water meter reader on batteries, such as HomeWizard's in battery mode, passes its data on only a few times a day; the flow and the water curve on the screen then follow those updates and are not live. A reader on mains power is live. With such a reader, leave **Water flow** empty, so Thuisbord shows the litres from the total and never a flow from hours ago.
+Every value is optional. A water meter reader on batteries, such as HomeWizard's in battery mode, passes its data on only a few times a day; the flow and the water curve on the screen then follow those updates and are not live. A reader on mains power is live. With a reader on batteries, leave **Water flow** empty, so Thuisbord shows the litres from the total and never a flow from hours ago.
 
 ### Install through HACS
 
