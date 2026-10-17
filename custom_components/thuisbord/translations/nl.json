@@ -115,12 +115,24 @@
               "water_total": "Het totaal van de watermeter, in m³, liter of een andere volume-eenheid, zoals Total water usage van HomeWizard.",
               "water_flow": "Hoeveel water er nu stroomt, in L/min, m³/h of een andere doorstroomeenheid, zoals Water usage van HomeWizard."
             }
+          },
+          "charger_section": {
+            "name": "Laadpaal (optioneel)",
+            "description": "Thuisbord laat jullie laadpaal zien: hoeveel stroom de auto nu krijgt en, op de dagkaart, hoeveel er vandaag is geladen. Thuisbord bedient de laadpaal nooit en toont geen laadniveau van de auto. De laadpaal hangt achter de meter, dus zijn vermogen zit al in het vermogen hierboven.",
+            "data": {
+              "charger_power": "Laadvermogen",
+              "charger_total": "Laadpaalstand"
+            },
+            "data_description": {
+              "charger_power": "Hoeveel stroom de auto nu krijgt, in W of kW. Een negatieve waarde gaat niet mee.",
+              "charger_total": "De eigen energiestand van de laadpaal, in kWh of Wh: de energie die hij aan auto's heeft geleverd."
+            }
           }
         }
       },
       "action": {
         "title": "Zelf een automatisering maken",
-        "description": "Home Assistant leest dan zelf geen sensoren. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas, jullie thuisbatterij en jullie watermeter. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen."
+        "description": "Home Assistant leest dan zelf geen sensoren. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas, jullie thuisbatterij, jullie watermeter en jullie laadpaal. Thuisbord neemt hooguit één meting per 10 seconden aan; een vroegere meting wordt overgeslagen."
       },
       "reauth_confirm": {
         "title": "Nieuwe koppelsleutel nodig",
@@ -170,7 +182,7 @@
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor het laadniveau en de grens van de batterij, een volume zoals m³ of liter voor de watermeterstand, of een doorstroming zoals L/min of m³/h voor de waterdoorstroming.",
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor het laadniveau en de grens van de batterij, een volume zoals m³ of liter voor de watermeterstand, een doorstroming zoals L/min of m³/h voor de waterdoorstroming, of W, kW, Wh of kWh voor de laadpaal.",
       "consent_still_missing": "Nog geen toestemming in de Thuisbord-app. Tik daar op Ik ga akkoord en probeer het opnieuw.",
       "battery_capacity_alone": "De capaciteit gaat alleen mee met het laadniveau, het vermogen of de grens van de batterij. Kies ook een van die sensoren, of laat Capaciteit leeg."
     },
@@ -270,19 +282,31 @@
               "water_total": "Het totaal van de watermeter, in m³, liter of een andere volume-eenheid, zoals Total water usage van HomeWizard.",
               "water_flow": "Hoeveel water er nu stroomt, in L/min, m³/h of een andere doorstroomeenheid, zoals Water usage van HomeWizard."
             }
+          },
+          "charger_section": {
+            "name": "Laadpaal (optioneel)",
+            "description": "Thuisbord laat jullie laadpaal zien: hoeveel stroom de auto nu krijgt en, op de dagkaart, hoeveel er vandaag is geladen. Thuisbord bedient de laadpaal nooit en toont geen laadniveau van de auto. De laadpaal hangt achter de meter, dus zijn vermogen zit al in het vermogen hierboven.",
+            "data": {
+              "charger_power": "Laadvermogen",
+              "charger_total": "Laadpaalstand"
+            },
+            "data_description": {
+              "charger_power": "Hoeveel stroom de auto nu krijgt, in W of kW. Een negatieve waarde gaat niet mee.",
+              "charger_total": "De eigen energiestand van de laadpaal, in kWh of Wh: de energie die hij aan auto's heeft geleverd."
+            }
           }
         }
       },
       "action": {
         "title": "Zelf een automatisering maken",
-        "description": "Home Assistant leest dan zelf geen sensoren meer. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas, jullie thuisbatterij en jullie watermeter."
+        "description": "Home Assistant leest dan zelf geen sensoren meer. Maak een automatisering die de actie **Thuisbord: Meting sturen** aanroept met jullie vermogen en, als je wilt, meterstanden, tarief, zonnestroom, gas, jullie thuisbatterij, jullie watermeter en jullie laadpaal."
       }
     },
     "error": {
       "power_required": "Kies een netto-vermogenssensor, of een afname- én een terugleveringssensor.",
       "power_pair_incomplete": "Kies bij vermogen zowel afname als teruglevering, of één netto-vermogenssensor.",
       "pair_incomplete": "Tarief 1 en tarief 2 gaan samen. Kies ze allebei of geen van beide ({entity_id}).",
-      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor het laadniveau en de grens van de batterij, een volume zoals m³ of liter voor de watermeterstand, of een doorstroming zoals L/min of m³/h voor de waterdoorstroming.",
+      "unsupported_unit": "{entity_id} heeft een eenheid die Thuisbord niet kent. Kies een sensor in W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor het laadniveau en de grens van de batterij, een volume zoals m³ of liter voor de watermeterstand, een doorstroming zoals L/min of m³/h voor de waterdoorstroming, of W, kW, Wh of kWh voor de laadpaal.",
       "battery_capacity_alone": "De capaciteit gaat alleen mee met het laadniveau, het vermogen of de grens van de batterij. Kies ook een van die sensoren, of laat Capaciteit leeg."
     }
   },
@@ -332,7 +356,7 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: eenheid niet herkend",
-      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor de batterij, een volume zoals m³ voor de watermeterstand of een doorstroming zoals L/min voor de waterdoorstroming, of kies een andere sensor in de opties van de Thuisbord-integratie."
+      "description": "{entity_id} heeft een eenheid die Thuisbord niet kent, dus deze waarde gaat niet mee. Gebruik W of kW, Wh, kWh of MWh, m³ of liter voor gas, % voor de batterij, een volume zoals m³ voor de watermeterstand een doorstroming zoals L/min voor de waterdoorstroming, W of kW voor het laadvermogen, Wh of kWh voor de laadpaalstand, of kies een andere sensor in de opties van de Thuisbord-integratie."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: waarde kan niet kloppen",
@@ -419,6 +443,14 @@
         "water_flow_lpm": {
           "name": "Waterdoorstroming",
           "description": "Hoeveel water er nu stroomt, in liter per minuut, van 0 tot 100."
+        },
+        "charger_power_w": {
+          "name": "Laadvermogen",
+          "description": "In watt, van 0 tot 60000: het vermogen waarmee de auto nu laadt. Zit al in het vermogen hierboven, komt er niet bovenop."
+        },
+        "charger_total_kwh": {
+          "name": "Laadpaalstand",
+          "description": "In kWh: de energie die de laadpaal in totaal heeft geleverd."
         }
       },
       "sections": {
@@ -433,6 +465,9 @@
         },
         "water": {
           "name": "Watermeter"
+        },
+        "charger": {
+          "name": "Laadpaal"
         }
       }
     }

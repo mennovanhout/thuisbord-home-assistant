@@ -12,6 +12,8 @@ from custom_components.thuisbord.const import (
     CONF_BATTERY_LEVEL,
     CONF_BATTERY_LIMIT,
     CONF_BATTERY_POWER,
+    CONF_CHARGER_POWER,
+    CONF_CHARGER_TOTAL,
     CONF_EXPORT_T1,
     CONF_EXPORT_T2,
     CONF_GAS_TOTAL,
@@ -210,10 +212,10 @@ def test_zero_total() -> None:
     assert built.reading["export_t2_kwh"] == "0.000"
 
 
-def test_reading_fields_end_with_the_battery_and_the_water_meter() -> None:
-    """The battery's four fields follow gas (0.11.0), and the water meter's two follow them
-    (0.19.0), in the contract's order."""
-    assert READING_FIELDS[-7:] == (
+def test_reading_fields_end_with_the_battery_the_water_meter_and_the_charger() -> None:
+    """The battery's four fields follow gas (0.11.0), the water meter's two follow them (0.19.0)
+    and the charger's two follow those (0.20.0), in the contract's order."""
+    assert READING_FIELDS[-9:] == (
         "gas_total_m3",
         "battery_power_w",
         "battery_level_pct",
@@ -221,6 +223,8 @@ def test_reading_fields_end_with_the_battery_and_the_water_meter() -> None:
         "battery_capacity_kwh",
         "water_total_m3",
         "water_flow_lpm",
+        "charger_power_w",
+        "charger_total_kwh",
     )
 
 
@@ -518,6 +522,11 @@ def test_action_values() -> None:
         ({"active_power_w": 1, "water_flow_lpm": 100.05}, "water_flow_lpm", "out_of_range"),
         ({"active_power_w": 1, "water_flow_lpm": -0.5}, "water_flow_lpm", "out_of_range"),
         ({"active_power_w": 1, "water_flow_lpm": "veel"}, "water_flow_lpm", "out_of_range"),
+        ({"active_power_w": 1, "charger_power_w": -1}, "charger_power_w", "out_of_range"),
+        ({"active_power_w": 1, "charger_power_w": 60001}, "charger_power_w", "out_of_range"),
+        ({"active_power_w": 1, "charger_power_w": "veel"}, "charger_power_w", "out_of_range"),
+        ({"active_power_w": 1, "charger_total_kwh": -1}, "charger_total_kwh", "out_of_range"),
+        ({"active_power_w": 1, "charger_total_kwh": 1000000}, "charger_total_kwh", "out_of_range"),
     ],
 )
 def test_action_values_refused(values: dict, field: str, code: str) -> None:
@@ -525,3 +534,139 @@ def test_action_values_refused(values: dict, field: str, code: str) -> None:
     with pytest.raises(InvalidReading) as err:
         reading_from_values(AT, values)
     assert (err.value.field, err.value.code) == (field, code)
+
+
+def test_car_charger_matches_the_contract_example() -> None:
+    """The contract's 'charger' example (0.20.0): 7400 W now and 2406.318 kWh in all, part of the
+    7812 W the home takes from the grid."""
+    built = build_reading(
+        AT,
+        {
+            CONF_POWER: SensorState("7812", "W"),
+            CONF_IMPORT_TOTAL: SensorState("8103.902", "kWh"),
+            CONF_CHARGER_POWER: SensorState("7.4", "kW"),
+            CONF_CHARGER_TOTAL: SensorState("2406318", "Wh"),
+        },
+    )
+    assert built.problems == ()
+    assert built.reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 7812,
+        "import_total_kwh": "8103.902",
+        "charger_power_w": 7400,
+        "charger_total_kwh": "2406.318",
+    }
+    assert list(built.reading) == [f for f in READING_FIELDS if f in built.reading]
+
+
+@pytest.mark.parametrize(
+    ("raw", "unit", "watts"),
+    [
+        ("7400", "W", 7400),
+        ("7.4", "kW", 7400),
+        ("7399.6", "W", 7400),
+        ("0", "W", 0),
+        ("0.4", "W", 0),
+        ("-0.4", "W", 0),
+        ("60", "kW", 60000),
+    ],
+)
+def test_charger_power_in_watts(raw: str, unit: str, watts: int) -> None:
+    """The charger's power is converted to whole watts, from 0 to 60000, and never -0."""
+    built = build_reading(AT, {CONF_POWER: POWER_840, CONF_CHARGER_POWER: SensorState(raw, unit)})
+    assert built.problems == ()
+    assert built.reading is not None
+    assert built.reading["charger_power_w"] == watts
+    assert isinstance(built.reading["charger_power_w"], int)
+
+
+@pytest.mark.parametrize(("raw", "unit"), [("-1", "W"), ("-0.6", "W"), ("-1.2", "kW")])
+def test_negative_charger_power_is_left_out_not_sent_as_zero(raw: str, unit: str) -> None:
+    """The contract allows no negative charger power: the value stays out of the reading, which
+    still goes with the rest. A charger's standby use below zero is no reason for a repair."""
+    built = build_reading(
+        AT,
+        {
+            CONF_POWER: POWER_840,
+            CONF_CHARGER_POWER: SensorState(raw, unit),
+            CONF_CHARGER_TOTAL: SensorState("2406.318", "kWh"),
+        },
+    )
+    assert built.problems == ()
+    assert built.reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 840,
+        "charger_total_kwh": "2406.318",
+    }
+
+
+@pytest.mark.parametrize(
+    ("raw", "unit", "total"),
+    [
+        ("2406.318", "kWh", "2406.318"),
+        ("2406318", "Wh", "2406.318"),
+        ("2.406318", "MWh", "2406.318"),
+        ("0", "kWh", "0.000"),
+    ],
+)
+def test_charger_total_in_kwh(raw: str, unit: str, total: str) -> None:
+    """The charger's total is converted to kWh exactly and written with three decimals."""
+    built = build_reading(AT, {CONF_POWER: POWER_840, CONF_CHARGER_TOTAL: SensorState(raw, unit)})
+    assert built.problems == ()
+    assert built.reading is not None
+    assert built.reading["charger_total_kwh"] == total
+
+
+@pytest.mark.parametrize(
+    ("sensor", "state", "reason"),
+    [
+        (CONF_CHARGER_POWER, SensorState("60.001", "kW"), Reason.OUT_OF_RANGE),
+        (CONF_CHARGER_POWER, SensorState("7400", None), Reason.UNIT),
+        (CONF_CHARGER_POWER, SensorState("7400", "kWh"), Reason.UNIT),
+        (CONF_CHARGER_TOTAL, SensorState("-1", "kWh"), Reason.OUT_OF_RANGE),
+        (CONF_CHARGER_TOTAL, SensorState("1000000", "kWh"), Reason.OUT_OF_RANGE),
+        (CONF_CHARGER_TOTAL, SensorState("2406", "kW"), Reason.UNIT),
+    ],
+)
+def test_unusable_charger_value_is_left_out(
+    sensor: str, state: SensorState, reason: Reason
+) -> None:
+    """A charger value that cannot be right is left out and named; power still goes."""
+    built = build_reading(AT, {CONF_POWER: POWER_840, sensor: state})
+    assert built.reading == {"measured_at": "2026-10-06T21:15:40Z", "active_power_w": 840}
+    assert built.problems == (Problem(sensor, reason),)
+
+
+@pytest.mark.parametrize("value", ["unknown", "unavailable", ""])
+def test_charger_without_a_value_is_left_out_quietly(value: str) -> None:
+    """A charger sensor without a value now is left out, and is no problem; the other one goes."""
+    built = build_reading(
+        AT,
+        {
+            CONF_POWER: POWER_840,
+            CONF_CHARGER_POWER: SensorState(value, "W"),
+            CONF_CHARGER_TOTAL: SensorState("12.5", "kWh"),
+        },
+    )
+    assert built.problems == ()
+    assert built.reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 840,
+        "charger_total_kwh": "12.500",
+    }
+
+
+def test_action_charger_values() -> None:
+    """The action takes the charger's power in watts and its total in kWh."""
+    reading = reading_from_values(
+        AT,
+        {"active_power_w": 7812, "charger_power_w": 7399.6, "charger_total_kwh": "2406.3184"},
+    )
+    assert reading == {
+        "measured_at": "2026-10-06T21:15:40Z",
+        "active_power_w": 7812,
+        "charger_power_w": 7400,
+        "charger_total_kwh": "2406.318",
+    }
+    reading = reading_from_values(AT, {"active_power_w": 1, "charger_power_w": 0})
+    assert reading["charger_power_w"] == 0

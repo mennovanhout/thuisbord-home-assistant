@@ -145,6 +145,42 @@ async def test_action_sends_a_water_meter(
     }
 
 
+async def test_action_sends_a_car_charger(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    aioclient_mock: AiohttpClientMocker,
+    action_entry: MockConfigEntry,
+) -> None:
+    """The charger's power goes in whole watts, its total in kWh with three decimals."""
+    freezer.move_to("2026-10-06 19:05:20+00:00")
+    aioclient_mock.post(READINGS_URL, status=202, json=accepted("2026-10-06T19:05:30Z"))
+    assert await hass.config_entries.async_setup(action_entry.entry_id)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_SEND_READING,
+        {
+            "config_entry_id": action_entry.entry_id,
+            "active_power_w": 7812,
+            "charger_power_w": 7400,
+            "charger_total_kwh": "2406.318",
+        },
+        blocking=True,
+    )
+    await hass.async_block_till_done(wait_background_tasks=True)
+    _, _, data, _ = aioclient_mock.mock_calls[0]
+    assert data == {
+        "readings": [
+            {
+                "measured_at": "2026-10-06T19:05:20Z",
+                "active_power_w": 7812,
+                "charger_power_w": 7400,
+                "charger_total_kwh": "2406.318",
+            }
+        ]
+    }
+
+
 @pytest.mark.parametrize(
     ("values", "key", "field"),
     [
@@ -155,6 +191,8 @@ async def test_action_sends_a_water_meter(
         ({"active_power_w": 1, "battery_capacity_kwh": 0}, "reading_out_of_range", "battery_capacity_kwh"),
         ({"active_power_w": 1, "water_flow_lpm": 150}, "reading_out_of_range", "water_flow_lpm"),
         ({"active_power_w": 1, "water_total_m3": -1}, "reading_out_of_range", "water_total_m3"),
+        ({"active_power_w": 1, "charger_power_w": -1}, "reading_out_of_range", "charger_power_w"),
+        ({"active_power_w": 1, "charger_total_kwh": -1}, "reading_out_of_range", "charger_total_kwh"),
     ],
 )
 async def test_action_refuses_what_thuisbord_would_refuse(

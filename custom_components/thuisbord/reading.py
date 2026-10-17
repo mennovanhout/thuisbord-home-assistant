@@ -23,6 +23,11 @@ A reading holds the fields of `Reading` in the Thuisbord API contract and nothin
   water flowing now in litres a minute, as text with one decimal, from 0 to 100. The total is
   converted from every unit the `water` device class allows, the flow from every unit the
   `volume_flow_rate` device class allows, in decimals.
+- a car charger, which Thuisbord shows and never controls, each field optional on its own:
+  `charger_power_w`, the power it delivers now in whole watts, from 0 to 60000, and
+  `charger_total_kwh`, its energy total as text with three decimals, like the meter's totals. The
+  charger sits behind the meter, so its power is already part of `active_power_w`. The contract
+  allows no negative power: a negative value is left out, never sent as 0.
 
 A value that is unknown or unavailable is left out, never sent as null or 0. Nothing in this
 module logs: values never reach the log.
@@ -42,6 +47,8 @@ from .const import (
     CONF_BATTERY_LEVEL,
     CONF_BATTERY_LIMIT,
     CONF_BATTERY_POWER,
+    CONF_CHARGER_POWER,
+    CONF_CHARGER_TOTAL,
     CONF_EXPORT_T1,
     CONF_EXPORT_T2,
     CONF_EXPORT_TOTAL,
@@ -158,6 +165,8 @@ READING_FIELDS: Final = (
     "battery_capacity_kwh",
     "water_total_m3",
     "water_flow_lpm",
+    "charger_power_w",
+    "charger_total_kwh",
 )
 
 TARIFF_WORDS: Final = {"1": 1, "low": 1, "2": 2, "normal": 2}
@@ -434,6 +443,23 @@ def build_reading(
         else:
             reading["water_flow_lpm"] = text
 
+    charger = reader.value(CONF_CHARGER_POWER, POWER_UNITS)
+    if charger is not None:
+        charger_w = _watts(charger)
+        # Never negative in the contract: left out, not sent as 0. A charger's standby use may
+        # read slightly below zero, so this is no reason for a repair.
+        if 0 <= charger_w <= POWER_LIMIT_W:
+            reading["charger_power_w"] = charger_w
+        elif charger_w > POWER_LIMIT_W:
+            reader.problems.append(Problem(CONF_CHARGER_POWER, Reason.OUT_OF_RANGE))
+    charger_total = reader.value(CONF_CHARGER_TOTAL, ENERGY_UNITS)
+    if charger_total is not None:
+        text = _format_total(charger_total)
+        if text is None:
+            reader.problems.append(Problem(CONF_CHARGER_TOTAL, Reason.OUT_OF_RANGE))
+        else:
+            reading["charger_total_kwh"] = text
+
     problems = tuple(reader.problems)
     if power is None:
         return Built(None, problems)
@@ -446,7 +472,8 @@ def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> 
     """Build one reading from the fields of an action call.
 
     `values` uses the reading's own field names, and the battery's power is already in Thuisbord's
-    sign, positive while charging; the water total is in m³ and the flow in litres a minute.
+    sign, positive while charging; the water total is in m³ and the flow in litres a minute; the
+    charger's power is in watts and never negative.
     Raises InvalidReading, naming the field, when a value cannot be sent; never silently changes
     what the household asked to send, except that totals and the capacity are written with three
     decimals, the water flow with one, percentages are rounded to whole percent, and a negative
@@ -462,7 +489,11 @@ def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> 
         raise InvalidReading("active_power_w", "out_of_range")
     reading["active_power_w"] = watts
 
-    for field in (*(field for _, field in ENERGY_TOTALS), "gas_total_m3", "water_total_m3"):
+    for field in (*(field for _, field in ENERGY_TOTALS),
+        "gas_total_m3",
+        "water_total_m3",
+        "charger_total_kwh",
+    ):
         if values.get(field) is None:
             continue
         number = _number(str(values[field]))
@@ -517,6 +548,13 @@ def reading_from_values(measured_at: datetime, values: Mapping[str, object]) -> 
         if text is None:
             raise InvalidReading("water_flow_lpm", "out_of_range")
         reading["water_flow_lpm"] = text
+
+    if values.get("charger_power_w") is not None:
+        charger = _number(str(values["charger_power_w"]))
+        charger_w = None if charger is None else _watts(charger)
+        if charger_w is None or not 0 <= charger_w <= POWER_LIMIT_W:
+            raise InvalidReading("charger_power_w", "out_of_range")
+        reading["charger_power_w"] = charger_w
 
     return _ordered(reading)
 

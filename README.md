@@ -11,7 +11,7 @@ Thuisbord turns a screen in your home into a shared household screen for energy 
 ### Wat het doet
 
 - Je koppelt Home Assistant aan jullie Thuisbord met de **koppelsleutel** uit de Thuisbord-app. Home Assistant controleert de sleutel meteen bij Thuisbord.
-- Je kiest jullie sensoren: vermogen (nodig), en als jullie meter ze geeft de meterstanden per tarief of totaal, het actieve tarief, zonnestroom en gas, een thuisbatterij en een watermeter. De integratie stuurt dan zelf een meting, hooguit elke 10 seconden.
+- Je kiest jullie sensoren: vermogen (nodig), en als jullie meter ze geeft de meterstanden per tarief of totaal, het actieve tarief, zonnestroom en gas, een thuisbatterij, een watermeter en een laadpaal. De integratie stuurt dan zelf een meting, hooguit elke 10 seconden.
 - Of je kiest voor de actie **Thuisbord: Meting sturen** en maakt zelf een automatisering.
 
 ### Thuisbatterij
@@ -34,6 +34,15 @@ Thuisbord laat een watermeter zien: hoeveel water er nu stroomt en hoeveel liter
 
 Elke waarde is optioneel. Een watermeterlezer op batterijen, zoals die van HomeWizard in batterijstand, geeft zijn gegevens maar een paar keer per dag door; dan volgen de doorstroming en de watercurve op het scherm die momenten en zijn ze niet live. Een lezer op netstroom is wel live. Laat bij een lezer op batterijen **Waterdoorstroming** leeg, dan toont Thuisbord de liters uit de meterstand en nooit een doorstroming van uren geleden.
 
+### Laadpaal
+
+Thuisbord laat een laadpaal zien en bedient hem nooit. Op het scherm staat hoeveel stroom de auto nu krijgt en, op de dagkaart, hoeveel kWh er vandaag is geladen. Een laadniveau van de auto toont Thuisbord niet. In het formulier met de sensoren staat het onderdeel **Laadpaal (optioneel)**:
+
+- **Laadvermogen**: een sensor in W of kW met het vermogen waarmee de auto nu laadt. Thuisbord krijgt hele watten, van 0 tot 60000. Een negatieve waarde gaat niet mee. De laadpaal hangt achter de meter: zijn vermogen zit al in het vermogen van de P1-meter, dus Thuisbord telt het niet dubbel.
+- **Laadpaalstand**: de eigen energiestand van de laadpaal, in Wh, kWh of MWh. Thuisbord krijgt kWh, met drie decimalen.
+
+Elke waarde is optioneel.
+
 ### Installeren via HACS
 
 1. Open HACS in Home Assistant.
@@ -49,7 +58,7 @@ Werkt Thuisbord niet meer met de sleutel, bijvoorbeeld omdat iemand in de app ee
 
 ### Wat Thuisbord krijgt
 
-Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, meterstanden en tarief, zonnestroom en gas, van een thuisbatterij het vermogen, het laadniveau, de grens en de capaciteit, en van een watermeter de meterstand en de doorstroming. Niets anders uit Home Assistant. De sleutel blijft in deze integratie, staat nooit in het logboek en wordt in diagnostische gegevens weggelaten. Meetwaarden komen ook niet in het logboek.
+Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, meterstanden en tarief, zonnestroom en gas, van een thuisbatterij het vermogen, het laadniveau, de grens en de capaciteit, en van een watermeter de meterstand en de doorstroming, en van een laadpaal het laadvermogen en de stand. Niets anders uit Home Assistant. De sleutel blijft in deze integratie, staat nooit in het logboek en wordt in diagnostische gegevens weggelaten. Meetwaarden komen ook niet in het logboek.
 
 ---
 
@@ -58,7 +67,7 @@ Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, 
 ### What it does
 
 - You connect Home Assistant to your Thuisbord with the **connection key** from the Thuisbord app. Home Assistant checks the key with Thuisbord at once.
-- You choose your sensors: power (required) and, when your meter reports them, totals per tariff or combined, the active tariff, solar and gas, a home battery and a water meter. The integration then sends a reading by itself, at most every 10 seconds.
+- You choose your sensors: power (required) and, when your meter reports them, totals per tariff or combined, the active tariff, solar and gas, a home battery, a water meter and a car charger. The integration then sends a reading by itself, at most every 10 seconds.
 - Or you choose the action **Thuisbord: Send reading** and build your own automation.
 
 ### Home battery
@@ -81,6 +90,15 @@ Thuisbord shows a water meter: how much water is flowing now and how many litres
 
 Every value is optional. A water meter reader on batteries, such as HomeWizard's in battery mode, passes its data on only a few times a day; the flow and the water curve on the screen then follow those updates and are not live. A reader on mains power is live. With a reader on batteries, leave **Water flow** empty, so Thuisbord shows the litres from the total and never a flow from hours ago.
 
+### Car charger
+
+Thuisbord shows a car charger and never controls it. The screen shows how much power the car is getting now and, on the day card, how many kWh were charged today. Thuisbord shows no charge level of the car. The sensors form has a section **Car charger (optional)**:
+
+- **Charging power**: a sensor in W or kW with the power the car is charging with now. Thuisbord gets whole watts, from 0 to 60000. A negative value is left out. The charger sits behind the meter: its power is already part of your P1 meter's power, so Thuisbord does not count it twice.
+- **Charger total**: the charger's own energy total, in Wh, kWh or MWh. Thuisbord gets kWh, with three decimals.
+
+Every value is optional.
+
 ### Install through HACS
 
 1. Open HACS in Home Assistant.
@@ -96,7 +114,7 @@ If Thuisbord stops accepting the key, for example because someone made a new one
 
 ### What Thuisbord receives
 
-Only the values you choose, at most one reading every 10 seconds: power, meter totals and tariff, solar and gas, a home battery's power, charge level, limit and capacity, and a water meter's total and flow. Nothing else from Home Assistant. The key stays in this integration, never reaches the log and is redacted from diagnostics. Readings never reach the log either.
+Only the values you choose, at most one reading every 10 seconds: power, meter totals and tariff, solar and gas, a home battery's power, charge level, limit and capacity, and a water meter's total and flow, and a car charger's power and total. Nothing else from Home Assistant. The key stays in this integration, never reaches the log and is redacted from diagnostics. Readings never reach the log either.
 
 ### The action
 
@@ -125,6 +143,13 @@ A water meter goes in the same call too, each field optional: `water_total_m3` i
 ```yaml
   water_total_m3: "{{ states('sensor.watermeter_total_water_usage') }}"
   water_flow_lpm: "{{ states('sensor.watermeter_water_usage') }}"
+```
+
+A car charger goes in the same call too, each field optional: `charger_power_w` in watts, from 0 to 60000 (never negative), and `charger_total_kwh` in kWh (written with three decimals). Its power is already part of `active_power_w`.
+
+```yaml
+  charger_power_w: "{{ states('sensor.car_charger_power') }}"
+  charger_total_kwh: "{{ states('sensor.car_charger_energy') }}"
 ```
 
 ---
@@ -156,6 +181,7 @@ The API this integration calls is Thuisbord's: `GET /connection` to check a key 
 - Home Assistant user docs: [selectors](https://www.home-assistant.io/docs/blueprint/selectors/)
 - For the home battery (0.2.0, read on 8 October 2026): the [Energy dashboard](https://www.home-assistant.io/docs/energy/) and [home batteries](https://www.home-assistant.io/docs/energy/battery/) pages, which state no sign; the battery source in the energy component's source, [`homeassistant/components/energy/data.py`](https://github.com/home-assistant/core/blob/dev/homeassistant/components/energy/data.py), whose `stat_rate` is "positive when discharging, negative when charging", with `stat_rate_inverted` for a sensor the other way round, `stat_soc` for the state of charge and `capacity` as a number in kWh; [translations of selectors](https://developers.home-assistant.io/docs/internationalization/core/) for the sign's options
 - For the water meter (0.3.0, read on 17 October 2026): the [sensor entity](https://developers.home-assistant.io/docs/core/entity/sensor/) page (now at contributors.home-assistant.io), whose device class table gives `water` in L, gal, m³, ft³, CCF and MCF and `volume_flow_rate` in mL/s, L/s, L/min, L/h, m³/s, m³/min, m³/h, ft³/min, gal/min, gal/h and gal/d, with `total` or `total_increasing` for water; Home Assistant 2026.3.0's own source for the exact unit strings and factors, `homeassistant/const.py` (`UnitOfVolume`, where `gal` is a US gallon, and `UnitOfVolumeFlowRate`), `homeassistant/util/unit_conversion.py` (`VolumeConverter`, `VolumeFlowRateConverter`) and `homeassistant/components/sensor/const.py` (`DEVICE_CLASS_UNITS`); the [water in the Energy dashboard](https://www.home-assistant.io/docs/energy/water/) page; the HomeWizard and DSMR integrations' `sensor.py` and `strings.json` in 2026.3.0 for the sensors' names (HomeWizard's flow sensor, "Water usage", has a unit but no device class); and HomeWizard's help article [using the Watermeter on batteries](https://helpdesk.homewizard.com/en/articles/6287312-using-the-watermeter-on-batteries) (it reads every 5 minutes and sends 4 times a day)
+- For the car charger (0.4.0, read on 17 October 2026): the same [sensor entity](https://contributors.home-assistant.io/core/entities/sensor/) page for the `power` and `energy` device classes and their units, which the integration already converts for the grid and solar; and the Homey Apps SDK [capabilities](https://apps.developer.homey.app/the-basics/devices/capabilities) page, which names `measure_power` and `meter_power` but states no unit
 - HACS: [publishing](https://hacs.xyz/docs/publish/start), [integrations](https://hacs.xyz/docs/publish/integration), [inclusion](https://hacs.xyz/docs/publish/include), [action](https://hacs.xyz/docs/publish/action)
 
 ## Licence

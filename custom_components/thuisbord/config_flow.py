@@ -44,6 +44,7 @@ from .const import (
     ALL_SENSORS,
     BATTERY_POWER_SIGNS,
     BATTERY_SENSORS,
+    CHARGER_SENSORS,
     CONF_ACTIVE_TARIFF,
     CONF_API_URL,
     CONF_BATTERY_CAPACITY,
@@ -51,6 +52,8 @@ from .const import (
     CONF_BATTERY_LIMIT,
     CONF_BATTERY_POWER,
     CONF_BATTERY_POWER_SIGN,
+    CONF_CHARGER_POWER,
+    CONF_CHARGER_TOTAL,
     CONF_CONNECTION_KEY,
     CONF_EXPORT_T1,
     CONF_EXPORT_T2,
@@ -96,12 +99,14 @@ SECTION_TOTALS: Final = "totals_section"
 SECTION_EXTRA: Final = "extra_section"
 SECTION_BATTERY: Final = "battery_section"
 SECTION_WATER: Final = "water_section"
+SECTION_CHARGER: Final = "charger_section"
 SENSOR_SECTIONS: Final = (
     SECTION_POWER,
     SECTION_TOTALS,
     SECTION_EXTRA,
     SECTION_BATTERY,
     SECTION_WATER,
+    SECTION_CHARGER,
 )
 
 # Which units each chosen sensor may report. The sensor selector already filters on device
@@ -124,6 +129,8 @@ SENSOR_UNITS: Final = {
     CONF_GAS_TOTAL: GAS_UNITS,
     CONF_WATER_TOTAL: WATER_UNITS,
     CONF_WATER_FLOW: FLOW_UNITS,
+    CONF_CHARGER_POWER: POWER_UNITS,
+    CONF_CHARGER_TOTAL: ENERGY_UNITS,
 }
 
 # The error shown for each refusal code of the contract.
@@ -267,7 +274,7 @@ def _entity(device_class: SensorDeviceClass | None = None) -> EntitySelector:
 
 
 def sensors_schema() -> vol.Schema:
-    """The form for choosing sensors: power, totals, tariff, solar, gas, battery and water.
+    """The form for choosing sensors: power, totals, tariff, solar, gas, battery, water and charger.
 
     The water flow sensor is not filtered on a device class: HomeWizard's water meter, for one,
     reports its flow in L/min without the `volume_flow_rate` device class. Its unit is checked
@@ -333,6 +340,15 @@ def sensors_schema() -> vol.Schema:
                 ),
                 {"collapsed": True},
             ),
+            vol.Required(SECTION_CHARGER): section(
+                vol.Schema(
+                    {
+                        vol.Optional(CONF_CHARGER_POWER): power,
+                        vol.Optional(CONF_CHARGER_TOTAL): energy,
+                    }
+                ),
+                {"collapsed": True},
+            ),
         }
     )
 
@@ -375,6 +391,8 @@ def nest_sensors(options: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
             sections[SECTION_BATTERY][key] = value
         elif key in WATER_SENSORS:
             sections[SECTION_WATER][key] = value
+        elif key in CHARGER_SENSORS:
+            sections[SECTION_CHARGER][key] = value
         else:
             sections[SECTION_TOTALS][key] = value
     for key in (CONF_BATTERY_POWER_SIGN, CONF_BATTERY_CAPACITY):

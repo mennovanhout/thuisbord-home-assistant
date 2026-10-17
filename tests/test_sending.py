@@ -24,6 +24,8 @@ from custom_components.thuisbord.const import (
     CONF_BATTERY_CAPACITY,
     CONF_BATTERY_LEVEL,
     CONF_BATTERY_POWER,
+    CONF_CHARGER_POWER,
+    CONF_CHARGER_TOTAL,
     CONF_MODE,
     CONF_POWER,
     CONF_SOLAR_TOTAL,
@@ -381,6 +383,73 @@ async def test_sends_the_home_battery(
             }
         ]
     ]
+
+
+async def test_sends_the_car_charger(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """The charger's power goes in watts and its total in kWh, from the units the sensors use."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Thuisbord",
+        unique_id="0199b6a2-7c22-7e10-8f4b-5a6c7d8e9f01",
+        data={"connection_key": KEY, "api_url": "https://thuisbord.app/api/v1"},
+        options={
+            CONF_MODE: MODE_SENSORS,
+            CONF_POWER: POWER_ENTITY,
+            CONF_CHARGER_POWER: "sensor.charger_power",
+            CONF_CHARGER_TOTAL: "sensor.charger_energy",
+        },
+    )
+    entry.add_to_hass(hass)
+    aioclient_mock.post(READINGS_URL, status=202, json=accepted(f"{DAY}T21:15:50Z"))
+    freezer.move_to(f"{DAY} 21:15:35+00:00")
+    # A charger that reports kW, and a total in Wh.
+    hass.states.async_set("sensor.charger_power", "7.4", {"unit_of_measurement": "kW"})
+    hass.states.async_set("sensor.charger_energy", "2406318", {"unit_of_measurement": "Wh"})
+    await start(hass, freezer, entry)
+    await at(hass, freezer, "21:15:40")
+    assert sent(aioclient_mock) == [
+        [
+            {
+                "measured_at": f"{DAY}T21:15:40Z",
+                "active_power_w": 840,
+                "charger_power_w": 7400,
+                "charger_total_kwh": "2406.318",
+            }
+        ]
+    ]
+
+
+async def test_negative_charger_power_is_not_sent(
+    hass: HomeAssistant,
+    freezer: FrozenDateTimeFactory,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """A negative charger power is left out of the reading and raises no repair."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Thuisbord",
+        unique_id="0199b6a2-7c22-7e10-8f4b-5a6c7d8e9f01",
+        data={"connection_key": KEY, "api_url": "https://thuisbord.app/api/v1"},
+        options={
+            CONF_MODE: MODE_SENSORS,
+            CONF_POWER: POWER_ENTITY,
+            CONF_CHARGER_POWER: "sensor.charger_power",
+        },
+    )
+    entry.add_to_hass(hass)
+    aioclient_mock.post(READINGS_URL, status=202, json=accepted(f"{DAY}T21:15:50Z"))
+    freezer.move_to(f"{DAY} 21:15:35+00:00")
+    hass.states.async_set("sensor.charger_power", "-12", {"unit_of_measurement": "W"})
+    await start(hass, freezer, entry)
+    await at(hass, freezer, "21:15:40")
+    assert sent(aioclient_mock) == [
+        [{"measured_at": f"{DAY}T21:15:40Z", "active_power_w": 840}]
+    ]
+    assert not ir.async_get(hass).issues
 
 
 async def test_sends_the_water_meter(

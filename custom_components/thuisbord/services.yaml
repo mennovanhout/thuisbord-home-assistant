@@ -128,3 +128,24 @@ send_reading:
               step: 0.1
               unit_of_measurement: L/min
               mode: box
+    charger:
+      collapsed: true
+      fields:
+        charger_power_w:
+          example: "7400"
+          selector:
+            number:
+              min: 0
+              max: 60000
+              step: 1
+              unit_of_measurement: W
+              mode: box
+        charger_total_kwh:
+          example: "2406.318"
+          selector:
+            number:
+              min: 0
+              max: 999999.999
+              step: 0.001
+              unit_of_measurement: kWh
+              mode: box

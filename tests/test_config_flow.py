@@ -21,6 +21,8 @@ from custom_components.thuisbord.const import (
     CONF_BATTERY_LIMIT,
     CONF_BATTERY_POWER,
     CONF_BATTERY_POWER_SIGN,
+    CONF_CHARGER_POWER,
+    CONF_CHARGER_TOTAL,
     CONF_CONNECTION_KEY,
     CONF_EXPORT_T1,
     CONF_IMPORT_T1,
@@ -57,6 +59,9 @@ BATTERY_LIMIT = "number.home_battery_minimum_state_of_charge"
 # device class, as Home Assistant's HomeWizard integration makes them.
 WATER_TOTAL = "sensor.watermeter_total_water_usage"
 WATER_FLOW = "sensor.watermeter_water_usage"
+# A car charger's power and its energy total.
+CHARGER_POWER = "sensor.car_charger_power"
+CHARGER_TOTAL = "sensor.car_charger_energy"
 
 
 BATTERY_FIELDS = (
@@ -69,12 +74,13 @@ BATTERY_FIELDS = (
 
 
 def sensors_input(**chosen: Any) -> dict[str, Any]:
-    """The sensors form as the frontend sends it, with its five sections."""
+    """The sensors form as the frontend sends it, with its six sections."""
     power = {k: v for k, v in chosen.items() if k in (CONF_POWER, CONF_POWER_IMPORT, CONF_POWER_EXPORT)}
     extra = {k: v for k, v in chosen.items() if k in ("solar_power", "solar_total", "gas_total")}
     battery = {k: v for k, v in chosen.items() if k in BATTERY_FIELDS}
     water = {k: v for k, v in chosen.items() if k in (CONF_WATER_TOTAL, CONF_WATER_FLOW)}
-    placed = {**power, **extra, **battery, **water}
+    charger = {k: v for k, v in chosen.items() if k in (CONF_CHARGER_POWER, CONF_CHARGER_TOTAL)}
+    placed = {**power, **extra, **battery, **water, **charger}
     totals = {k: v for k, v in chosen.items() if k not in placed}
     return {
         "power_section": power,
@@ -82,6 +88,7 @@ def sensors_input(**chosen: Any) -> dict[str, Any]:
         "extra_section": extra,
         "battery_section": battery,
         "water_section": water,
+        "charger_section": charger,
     }
 
 
@@ -98,6 +105,12 @@ def power_sensor(hass: HomeAssistant) -> None:
         WATER_TOTAL, "1523.684", {"unit_of_measurement": "m³", "device_class": "water"}
     )
     hass.states.async_set(WATER_FLOW, "7.5", {"unit_of_measurement": "L/min"})
+    hass.states.async_set(
+        CHARGER_POWER, "7.4", {"unit_of_measurement": "kW", "device_class": "power"}
+    )
+    hass.states.async_set(
+        CHARGER_TOTAL, "2406318", {"unit_of_measurement": "Wh", "device_class": "energy"}
+    )
 
 
 async def _to_menu(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> dict[str, Any]:
@@ -224,6 +237,30 @@ async def test_sensors_with_a_water_meter(
         CONF_POWER: POWER_ENTITY,
         CONF_WATER_TOTAL: WATER_TOTAL,
         CONF_WATER_FLOW: WATER_FLOW,
+    }
+
+
+async def test_sensors_with_a_car_charger(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The charger section stores the power and the total sensor, each on its own."""
+    result = await _to_menu(hass, aioclient_mock)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    with patch("custom_components.thuisbord.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            sensors_input(
+                power=POWER_ENTITY, charger_power=CHARGER_POWER, charger_total=CHARGER_TOTAL
+            ),
+        )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["options"] == {
+        CONF_MODE: MODE_SENSORS,
+        CONF_POWER: POWER_ENTITY,
+        CONF_CHARGER_POWER: CHARGER_POWER,
+        CONF_CHARGER_TOTAL: CHARGER_TOTAL,
     }
 
 
@@ -454,6 +491,9 @@ async def test_household_already_added(
         ({CONF_POWER: POWER_ENTITY, CONF_WATER_TOTAL: WATER_FLOW}, "unsupported_unit"),
         ({CONF_POWER: POWER_ENTITY, CONF_WATER_FLOW: WATER_TOTAL}, "unsupported_unit"),
         ({CONF_POWER: POWER_ENTITY, CONF_WATER_FLOW: BATTERY_LEVEL}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_CHARGER_POWER: "sensor.p1_import_t1"}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_CHARGER_TOTAL: WATER_TOTAL}, "unsupported_unit"),
+        ({CONF_POWER: POWER_ENTITY, CONF_CHARGER_TOTAL: CHARGER_POWER}, "unsupported_unit"),
     ],
 )
 async def test_sensor_choice_refused(
@@ -675,3 +715,32 @@ async def test_options_switch_to_action(
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert sensors_entry.options == {CONF_MODE: MODE_ACTION}
     await _settle(hass, sensors_entry)
+
+
+async def test_options_suggest_the_car_charger(hass: HomeAssistant) -> None:
+    """The options form suggests the stored charger sensors again, in their own section."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Thuisbord",
+        unique_id=HOUSEHOLD,
+        data={CONF_CONNECTION_KEY: KEY, CONF_API_URL: DEFAULT_API_URL},
+        options={
+            CONF_MODE: MODE_SENSORS,
+            CONF_POWER: POWER_ENTITY,
+            CONF_CHARGER_POWER: CHARGER_POWER,
+            CONF_CHARGER_TOTAL: CHARGER_TOTAL,
+        },
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": MODE_SENSORS}
+    )
+    schema = result["data_schema"].schema
+    charger_section = next(v for k, v in schema.items() if k == "charger_section")
+    suggested = {
+        str(key): key.description.get("suggested_value")
+        for key in charger_section.schema.schema
+        if key.description
+    }
+    assert suggested == {CONF_CHARGER_POWER: CHARGER_POWER, CONF_CHARGER_TOTAL: CHARGER_TOTAL}

@@ -115,12 +115,24 @@
               "water_total": "The water meter's total, in m³, litres or another volume unit, such as HomeWizard's Total water usage.",
               "water_flow": "How much water is flowing now, in L/min, m³/h or another flow unit, such as HomeWizard's Water usage."
             }
+          },
+          "charger_section": {
+            "name": "Car charger (optional)",
+            "description": "Thuisbord shows your car charger: how much power the car is getting now and, on the day card, how much was charged today. Thuisbord never controls the charger and shows no charge level of the car. The charger sits behind the meter, so its power is already part of the power above.",
+            "data": {
+              "charger_power": "Charging power",
+              "charger_total": "Charger total"
+            },
+            "data_description": {
+              "charger_power": "How much power the car is getting now, in W or kW. A negative value is left out.",
+              "charger_total": "The charger's own energy total, in kWh or Wh, the energy it has delivered to cars."
+            }
           }
         }
       },
       "action": {
         "title": "Make your own automation",
-        "description": "Home Assistant then reads no sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas, your home battery and your water meter. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped."
+        "description": "Home Assistant then reads no sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas, your home battery, your water meter and your car charger. Thuisbord takes at most one reading every 10 seconds; an earlier one is skipped."
       },
       "reauth_confirm": {
         "title": "New connection key needed",
@@ -170,7 +182,7 @@
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery's charge level and limit, a volume such as m³ or litres for the water total, or a flow such as L/min or m³/h for the water flow.",
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery's charge level and limit, a volume such as m³ or litres for the water total, a flow such as L/min or m³/h for the water flow, or W, kW, Wh or kWh for the car charger.",
       "consent_still_missing": "No consent in the Thuisbord app yet. Tap I agree there and try again.",
       "battery_capacity_alone": "The capacity only goes along with the battery's charge level, power or limit. Choose one of those sensors too, or leave Capacity empty."
     },
@@ -270,19 +282,31 @@
               "water_total": "The water meter's total, in m³, litres or another volume unit, such as HomeWizard's Total water usage.",
               "water_flow": "How much water is flowing now, in L/min, m³/h or another flow unit, such as HomeWizard's Water usage."
             }
+          },
+          "charger_section": {
+            "name": "Car charger (optional)",
+            "description": "Thuisbord shows your car charger: how much power the car is getting now and, on the day card, how much was charged today. Thuisbord never controls the charger and shows no charge level of the car. The charger sits behind the meter, so its power is already part of the power above.",
+            "data": {
+              "charger_power": "Charging power",
+              "charger_total": "Charger total"
+            },
+            "data_description": {
+              "charger_power": "How much power the car is getting now, in W or kW. A negative value is left out.",
+              "charger_total": "The charger's own energy total, in kWh or Wh, the energy it has delivered to cars."
+            }
           }
         }
       },
       "action": {
         "title": "Make your own automation",
-        "description": "Home Assistant then no longer reads sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas, your home battery and your water meter."
+        "description": "Home Assistant then no longer reads sensors itself. Make an automation that calls the action **Thuisbord: Send reading** with your power and, if you like, meter totals, tariff, solar, gas, your home battery, your water meter and your car charger."
       }
     },
     "error": {
       "power_required": "Choose a net power sensor, or an import and an export power sensor.",
       "power_pair_incomplete": "For power, choose both import and export, or one net power sensor.",
       "pair_incomplete": "Tariff 1 and tariff 2 go together. Choose both or neither ({entity_id}).",
-      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery's charge level and limit, a volume such as m³ or litres for the water total, or a flow such as L/min or m³/h for the water flow.",
+      "unsupported_unit": "{entity_id} has a unit Thuisbord does not know. Choose a sensor in W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery's charge level and limit, a volume such as m³ or litres for the water total, a flow such as L/min or m³/h for the water flow, or W, kW, Wh or kWh for the car charger.",
       "battery_capacity_alone": "The capacity only goes along with the battery's charge level, power or limit. Choose one of those sensors too, or leave Capacity empty."
     }
   },
@@ -332,7 +356,7 @@
     },
     "sensor_unit": {
       "title": "Thuisbord: unit not understood",
-      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery, a volume such as m³ for the water total or a flow such as L/min for the water flow, or choose another sensor in the Thuisbord integration's options."
+      "description": "{entity_id} has a unit Thuisbord does not know, so this value is left out. Use W or kW, Wh, kWh or MWh, m³ or litres for gas, % for the battery, a volume such as m³ for the water total a flow such as L/min for the water flow, W or kW for the charger's power, Wh or kWh for its total, or choose another sensor in the Thuisbord integration's options."
     },
     "sensor_out_of_range": {
       "title": "Thuisbord: impossible value",
@@ -419,6 +443,14 @@
         "water_flow_lpm": {
           "name": "Water flow",
           "description": "How much water is flowing now, in litres a minute, from 0 to 100."
+        },
+        "charger_power_w": {
+          "name": "Charging power",
+          "description": "In watts, from 0 to 60000: the power the car is getting now. Part of the power above, not on top of it."
+        },
+        "charger_total_kwh": {
+          "name": "Charger total",
+          "description": "In kWh: the energy the charger has delivered in all."
         }
       },
       "sections": {
@@ -433,6 +465,9 @@
         },
         "water": {
           "name": "Water meter"
+        },
+        "charger": {
+          "name": "Car charger"
         }
       }
     }
