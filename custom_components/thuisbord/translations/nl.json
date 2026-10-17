@@ -106,7 +106,7 @@
           },
           "water_section": {
             "name": "Watermeter (optioneel)",
-            "description": "Thuisbord laat jullie watermeter zien: hoeveel water er nu stroomt en hoeveel liter jullie vandaag gebruikten. Alleen het volume; Thuisbord zet geen prijs op water. Een lezer op batterijen geeft zijn gegevens maar een paar keer per dag door; dan zijn de doorstroming en de watercurve niet live.",
+            "description": "Thuisbord laat jullie watermeter zien: hoeveel water er nu stroomt en hoeveel liter jullie vandaag gebruikten. Alleen het volume; Thuisbord zet geen prijs op water. Een lezer op batterijen geeft zijn gegevens maar een paar keer per dag door; dan zijn de doorstroming en de watercurve niet live. Laat bij zo'n lezer Waterdoorstroming leeg, dan toont Thuisbord de liters uit de meterstand en nooit een doorstroming van uren geleden.",
             "data": {
               "water_total": "Watermeterstand",
               "water_flow": "Waterdoorstroming"
@@ -261,7 +261,7 @@
           },
           "water_section": {
             "name": "Watermeter (optioneel)",
-            "description": "Thuisbord laat jullie watermeter zien: hoeveel water er nu stroomt en hoeveel liter jullie vandaag gebruikten. Alleen het volume; Thuisbord zet geen prijs op water. Een lezer op batterijen geeft zijn gegevens maar een paar keer per dag door; dan zijn de doorstroming en de watercurve niet live.",
+            "description": "Thuisbord laat jullie watermeter zien: hoeveel water er nu stroomt en hoeveel liter jullie vandaag gebruikten. Alleen het volume; Thuisbord zet geen prijs op water. Een lezer op batterijen geeft zijn gegevens maar een paar keer per dag door; dan zijn de doorstroming en de watercurve niet live. Laat bij zo'n lezer Waterdoorstroming leeg, dan toont Thuisbord de liters uit de meterstand en nooit een doorstroming van uren geleden.",
             "data": {
               "water_total": "Watermeterstand",
               "water_flow": "Waterdoorstroming"
