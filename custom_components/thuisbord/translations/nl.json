@@ -329,6 +329,53 @@
       },
       "last_sent": {
         "name": "Laatste meting verstuurd"
+      },
+      "battery_advice": {
+        "name": "Laadadvies thuisbatterij",
+        "state": {
+          "charge": "Laden",
+          "hold": "Vasthouden",
+          "normal": "Normaal"
+        },
+        "state_attributes": {
+          "recommend_charge": {
+            "name": "Laden aanbevolen"
+          },
+          "until": {
+            "name": "Tot"
+          },
+          "price_now": {
+            "name": "Prijs nu"
+          },
+          "break_even_price": {
+            "name": "Drempelprijs"
+          },
+          "reason": {
+            "name": "Reden",
+            "state": {
+              "cheap_now": "Goedkoop nu",
+              "dearer_later": "Duurder later",
+              "no_gain": "Geen winst",
+              "no_battery": "Geen thuisbatterij",
+              "no_level": "Geen laadniveau",
+              "no_capacity": "Geen capaciteit",
+              "fixed_contract": "Vast contract",
+              "contract_missing": "Contract ontbreekt",
+              "prices_unknown": "Prijzen onbekend"
+            }
+          },
+          "computed_at": {
+            "name": "Berekend om"
+          },
+          "next_update_at": {
+            "name": "Volgende update"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "recommend_charge": {
+        "name": "Laden aanbevolen"
       }
     }
   },

@@ -1,7 +1,10 @@
-"""The two calls this integration makes to the Thuisbord API.
+"""The three calls this integration makes to the Thuisbord API.
 
 - `GET /connection` checks a connection key without sending meter data.
 - `POST /readings` sends a batch of readings.
+- `GET /battery-advice` reads the household's battery charging advice (contract 0.28.0). It
+  sends nothing to Thuisbord; the advice is shown as sensors and acting on it is the household's
+  own automation.
 
 Both carry the household's connection key as a bearer token. The key goes to the configured
 address only: redirects are never followed. Nothing here logs the key, a reading or a response
@@ -12,6 +15,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any, Final
 
 import aiohttp
@@ -52,7 +57,12 @@ class KeyRefused(ThuisbordError):
 
 
 class TooManyRequests(ThuisbordError):
-    """429: try again later."""
+    """429: try again later, after `retry_after` seconds when Thuisbord says how long."""
+
+    def __init__(self, retry_after: float | None = None) -> None:
+        """Keep the wait Thuisbord asked for."""
+        super().__init__("HTTP 429")
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +89,44 @@ class Answer:
         """The contract's error code, when the body has one."""
         code = self.body.get("code") if self.body else None
         return code if isinstance(code, str) else None
+
+
+# The states and reasons of the battery charging advice (contract 0.28.0). A later contract version
+# may add reasons; one this integration does not know is shown as no reason, the state alone.
+ADVICE_STATES: Final = ("charge", "hold", "normal")
+ADVICE_REASONS: Final = (
+    "cheap_now",
+    "dearer_later",
+    "no_gain",
+    "no_battery",
+    "no_level",
+    "no_capacity",
+    "fixed_contract",
+    "contract_missing",
+    "prices_unknown",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class BatteryAdvice:
+    """What `GET /battery-advice` tells a bridge, without the plan per slot."""
+
+    state: str
+    recommend_charge: bool
+    reason: str | None
+    state_until: datetime | None
+    price_now: Decimal | None
+    break_even_price: Decimal | None
+    computed_at: datetime
+    next_update_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class AdviceResult:
+    """An answer to `GET /battery-advice`. No advice means 304: what was sent is still right."""
+
+    advice: BatteryAdvice | None
+    etag: str | None
 
 
 def refusal_code(status: int, body: dict[str, Any] | None) -> str:
@@ -142,6 +190,45 @@ class ThuisbordApi:
             raise CannotConnect
         raise UnexpectedResponse(status)
 
+    async def get_battery_advice(self, etag: str | None = None) -> AdviceResult:
+        """Read the advice, with `If-None-Match` when the last `etag` is given.
+
+        Raises KeyRefused, TooManyRequests, CannotConnect or UnexpectedResponse.
+        """
+        headers = self._headers()
+        if etag:
+            headers["If-None-Match"] = etag
+        try:
+            async with self._session.get(
+                f"{self._base_url}/battery-advice",
+                headers=headers,
+                allow_redirects=False,
+                timeout=REQUEST_TIMEOUT,
+            ) as response:
+                status = response.status
+                retry_after = response.headers.get("Retry-After")
+                new_etag = response.headers.get("ETag")
+                body = None if status == 304 else await _json(response)
+        except (aiohttp.ClientError, TimeoutError) as err:
+            raise CannotConnect from err
+
+        if status == 304:
+            return AdviceResult(advice=None, etag=etag)
+        if status == 200:
+            advice = _parse_advice(body)
+            if advice is None:
+                raise UnexpectedResponse(status)
+            return AdviceResult(advice=advice, etag=new_etag)
+        if status in (401, 403):
+            raise KeyRefused(status, refusal_code(status, body))
+        if status == 429:
+            raise TooManyRequests(
+                float(retry_after) if retry_after and retry_after.strip().isdigit() else None
+            )
+        if status >= 500:
+            raise CannotConnect
+        raise UnexpectedResponse(status)
+
     async def send_readings(self, readings: Sequence[Reading]) -> Answer:
         """Send a batch. Never raises: a failure is an Answer with status 0."""
         try:
@@ -175,3 +262,52 @@ def _positive_int(value: object, default: int) -> int:
     if isinstance(value, int) and not isinstance(value, bool) and value > 0:
         return value
     return default
+
+
+def _parse_advice(body: dict[str, Any] | None) -> BatteryAdvice | None:
+    """Return the advice from a 200 body, or None when it is not what the contract describes."""
+    if body is None:
+        return None
+    state = body.get("state")
+    recommend = body.get("recommend_charge")
+    if state not in ADVICE_STATES or not isinstance(recommend, bool):
+        return None
+    reason = body.get("reason")
+    try:
+        computed_at = _moment(body.get("computed_at"))
+        next_update_at = _moment(body.get("next_update_at"))
+        state_until = _moment(body.get("state_until"))
+        price_now = _price(body.get("price_now"))
+        break_even = _price(body.get("break_even_price"))
+    except (ValueError, InvalidOperation):
+        return None
+    if computed_at is None or next_update_at is None:
+        return None
+    return BatteryAdvice(
+        state=state,
+        recommend_charge=recommend,
+        reason=reason if reason in ADVICE_REASONS else None,
+        state_until=state_until,
+        price_now=price_now,
+        break_even_price=break_even,
+        computed_at=computed_at,
+        next_update_at=next_update_at,
+    )
+
+
+def _moment(value: object) -> datetime | None:
+    """A UTC timestamp such as `2026-11-10T22:30:00Z`; null stays None."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("not a timestamp")
+    return datetime.fromisoformat(value)
+
+
+def _price(value: object) -> Decimal | None:
+    """A price such as `0.13505`: a decimal string, or null."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError("not a decimal string")
+    return Decimal(value)

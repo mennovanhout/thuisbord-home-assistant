@@ -11,6 +11,22 @@
       },
       "last_sent": {
         "default": "mdi:clock-check-outline"
+      },
+      "battery_advice": {
+        "default": "mdi:battery-clock-outline",
+        "state": {
+          "charge": "mdi:battery-charging",
+          "hold": "mdi:battery-lock",
+          "normal": "mdi:battery-outline"
+        }
+      }
+    },
+    "binary_sensor": {
+      "recommend_charge": {
+        "default": "mdi:battery-off-outline",
+        "state": {
+          "on": "mdi:battery-charging-outline"
+        }
       }
     }
   },

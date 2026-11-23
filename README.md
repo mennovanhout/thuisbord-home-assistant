@@ -2,7 +2,7 @@
 
 [Nederlands](#nederlands) · [English](#english)
 
-Thuisbord turns a screen in your home into a shared household screen for energy and family. This integration sends your smart meter's readings from Home Assistant to your household's Thuisbord. It is a bridge only: it reads the sensors you choose and controls no devices.
+Thuisbord turns a screen in your home into a shared household screen for energy and family. This integration sends your smart meter's readings from Home Assistant to your household's Thuisbord, and shows Thuisbord's battery charging advice as sensors. It is a bridge only: it reads the sensors you choose and controls no devices.
 
 ---
 
@@ -43,6 +43,35 @@ Thuisbord laat een laadpaal zien en bedient hem nooit. Op het scherm staat hoeve
 
 Elke waarde is optioneel.
 
+### Laadadvies voor de thuisbatterij
+
+Heeft het huishouden een thuisbatterij en een dynamisch energiecontract, dan rekent Thuisbord uit wanneer laden uit het net loont, alleen op basis van de prijzen. De integratie leest dat advies en toont het. Thuisbord **deelt** het advies; of het aan de batterij wordt gekoppeld is de eigen keuze van het huishouden, en **standaard doet niets er iets mee**. De integratie schakelt of bedient niets.
+
+Er komen twee entiteiten bij:
+
+- **Laadadvies thuisbatterij** (`sensor.thuisbord_laadadvies_thuisbatterij`): `charge` (Laden), `hold` (Vasthouden: niet ontladen, de lading is later meer waard) of `normal` (Normaal: de batterij doet wat ze zelf doet). Attributen: **Tot** (tot wanneer), **Prijs nu** en **Drempelprijs** (€ per kWh, alles inbegrepen), **Reden** en **Volgende update**. Zonder thuisbatterij, zonder dynamisch contract of zolang de prijzen onbekend zijn is het `normal`, met de reden erbij.
+- **Laden aanbevolen** (binaire sensor): aan precies als het advies `charge` is.
+
+De integratie vraagt het advies hooguit één keer per minuut en meestal één keer per kwartier, kort na de volgende update, met `If-None-Match`. Kan Thuisbord niet worden bereikt, dan zijn de entiteiten **niet beschikbaar**; ze tonen dan geen verouderd advies. Wijst Thuisbord de sleutel af, dan start de herauthenticatie.
+
+Voorbeeld van een eigen automatisering, als jullie die willen. Vervang de entiteit van de batterij door die van jullie eigen batterij:
+
+```yaml
+automation:
+  - alias: Thuisbatterij laden als Thuisbord dat adviseert
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.thuisbord_laden_aanbevolen
+    actions:
+      - action: select.select_option
+        target:
+          entity_id: select.mijn_thuisbatterij_modus   # jullie eigen batterij
+        data:
+          option: "{{ 'Laden' if trigger.to_state.state == 'on' else 'Automatisch' }}"
+```
+
+De namen van de entiteiten en van de opties hangen af van jullie taal en van jullie batterij.
+
 ### Installeren via HACS
 
 1. Open HACS in Home Assistant.
@@ -58,7 +87,7 @@ Werkt Thuisbord niet meer met de sleutel, bijvoorbeeld omdat iemand in de app ee
 
 ### Wat Thuisbord krijgt
 
-Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, meterstanden en tarief, zonnestroom en gas, van een thuisbatterij het vermogen, het laadniveau, de grens en de capaciteit, en van een watermeter de meterstand en de doorstroming, en van een laadpaal het laadvermogen en de stand. Niets anders uit Home Assistant. De sleutel blijft in deze integratie, staat nooit in het logboek en wordt in diagnostische gegevens weggelaten. Meetwaarden komen ook niet in het logboek.
+Alleen de waarden die je kiest, hooguit één meting per 10 seconden: vermogen, meterstanden en tarief, zonnestroom en gas, van een thuisbatterij het vermogen, het laadniveau, de grens en de capaciteit, en van een watermeter de meterstand en de doorstroming, en van een laadpaal het laadvermogen en de stand. Niets anders uit Home Assistant. Het laadadvies lezen stuurt niets naar Thuisbord. De sleutel blijft in deze integratie, staat nooit in het logboek en wordt in diagnostische gegevens weggelaten. Meetwaarden komen ook niet in het logboek.
 
 ---
 
@@ -99,6 +128,35 @@ Thuisbord shows a car charger and never controls it. The screen shows how much p
 
 Every value is optional.
 
+### Battery charging advice
+
+For a household with a home battery and a dynamic energy contract, Thuisbord works out from prices only when charging from the grid pays off. The integration reads that advice and shows it. Thuisbord **shares** the advice; wiring it to the battery is the household's own choice, and **by default nothing acts on it**. The integration switches and controls nothing.
+
+It adds two entities:
+
+- **Battery charging advice** (`sensor.thuisbord_battery_charging_advice`): `charge`, `hold` (do not discharge, the charge is worth more later) or `normal` (the battery does what it does by itself). Attributes: **Until**, **Price now** and **Threshold price** (€ per kWh, all in), **Reason** and **Next update**. Without a home battery, without a dynamic contract, or while the prices are unknown it is `normal`, with the reason.
+- **Recommend to charge** (binary sensor): on exactly when the advice is `charge`.
+
+The integration asks for the advice at most once a minute and usually once a quarter of an hour, shortly after the next update, with `If-None-Match`. While Thuisbord cannot be reached the entities are **unavailable**, so they never show an advice that may be out of date. When Thuisbord refuses the key, re-authentication starts.
+
+An example of an automation of your own, if you want one. Replace the entity with your own battery's:
+
+```yaml
+automation:
+  - alias: Charge the home battery when Thuisbord advises it
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.thuisbord_recommend_to_charge
+    actions:
+      - action: select.select_option
+        target:
+          entity_id: select.my_home_battery_mode   # your own battery
+        data:
+          option: "{{ 'Charge' if trigger.to_state.state == 'on' else 'Automatic' }}"
+```
+
+Entity names and option names depend on your language and on your battery.
+
 ### Install through HACS
 
 1. Open HACS in Home Assistant.
@@ -114,7 +172,7 @@ If Thuisbord stops accepting the key, for example because someone made a new one
 
 ### What Thuisbord receives
 
-Only the values you choose, at most one reading every 10 seconds: power, meter totals and tariff, solar and gas, a home battery's power, charge level, limit and capacity, and a water meter's total and flow, and a car charger's power and total. Nothing else from Home Assistant. The key stays in this integration, never reaches the log and is redacted from diagnostics. Readings never reach the log either.
+Only the values you choose, at most one reading every 10 seconds: power, meter totals and tariff, solar and gas, a home battery's power, charge level, limit and capacity, and a water meter's total and flow, and a car charger's power and total. Nothing else from Home Assistant. Reading the charging advice sends nothing to Thuisbord. The key stays in this integration, never reaches the log and is redacted from diagnostics. Readings never reach the log either.
 
 ### The action
 
@@ -173,7 +231,7 @@ docker run --rm -v "$PWD:/src" -w /src python:3.14-slim sh -c "pip install -q -r
 
 CI runs the tests, [hassfest](https://github.com/home-assistant/actions) and the [HACS action](https://hacs.xyz/docs/publish/action).
 
-The API this integration calls is Thuisbord's: `GET /connection` to check a key and `POST /readings` to send readings, with the connection key as a bearer token.
+The API this integration calls is Thuisbord's: `GET /connection` to check a key, `POST /readings` to send readings and, since 0.5.0 (contract 0.28.0), `GET /battery-advice` to read the charging advice (10 requests a minute per key, `ETag` and `304`), with the connection key as a bearer token.
 
 ### Documentation used
 
@@ -182,6 +240,7 @@ The API this integration calls is Thuisbord's: `GET /connection` to check a key 
 - For the home battery (0.2.0, read on 8 October 2026): the [Energy dashboard](https://www.home-assistant.io/docs/energy/) and [home batteries](https://www.home-assistant.io/docs/energy/battery/) pages, which state no sign; the battery source in the energy component's source, [`homeassistant/components/energy/data.py`](https://github.com/home-assistant/core/blob/dev/homeassistant/components/energy/data.py), whose `stat_rate` is "positive when discharging, negative when charging", with `stat_rate_inverted` for a sensor the other way round, `stat_soc` for the state of charge and `capacity` as a number in kWh; [translations of selectors](https://developers.home-assistant.io/docs/internationalization/core/) for the sign's options
 - For the water meter (0.3.0, read on 17 October 2026): the [sensor entity](https://developers.home-assistant.io/docs/core/entity/sensor/) page (now at contributors.home-assistant.io), whose device class table gives `water` in L, gal, m³, ft³, CCF and MCF and `volume_flow_rate` in mL/s, L/s, L/min, L/h, m³/s, m³/min, m³/h, ft³/min, gal/min, gal/h and gal/d, with `total` or `total_increasing` for water; Home Assistant 2026.3.0's own source for the exact unit strings and factors, `homeassistant/const.py` (`UnitOfVolume`, where `gal` is a US gallon, and `UnitOfVolumeFlowRate`), `homeassistant/util/unit_conversion.py` (`VolumeConverter`, `VolumeFlowRateConverter`) and `homeassistant/components/sensor/const.py` (`DEVICE_CLASS_UNITS`); the [water in the Energy dashboard](https://www.home-assistant.io/docs/energy/water/) page; the HomeWizard and DSMR integrations' `sensor.py` and `strings.json` in 2026.3.0 for the sensors' names (HomeWizard's flow sensor, "Water usage", has a unit but no device class); and HomeWizard's help article [using the Watermeter on batteries](https://helpdesk.homewizard.com/en/articles/6287312-using-the-watermeter-on-batteries) (it reads every 5 minutes and sends 4 times a day)
 - For the car charger (0.4.0, read on 17 October 2026): the same [sensor entity](https://contributors.home-assistant.io/core/entities/sensor/) page for the `power` and `energy` device classes and their units, which the integration already converts for the grid and solar; and the Homey Apps SDK [capabilities](https://apps.developer.homey.app/the-basics/devices/capabilities) page, which names `measure_power` and `meter_power` but states no unit
+- For the charging advice (0.5.0, read on 23 November 2026): [fetching data](https://contributors.home-assistant.io/core/integrations/fetching-data/) (`DataUpdateCoordinator`, `UpdateFailed` with `retry_after`, `ConfigEntryAuthFailed`, `async_refresh` against `async_config_entry_first_refresh`) and the [binary sensor entity](https://contributors.home-assistant.io/core/entities/binary-sensor/) page, with `homeassistant/helpers/update_coordinator.py` of 2026.9 for the exact behaviour; Thuisbord's `api/openapi.yaml` 0.28.0 for `GET /battery-advice`
 - HACS: [publishing](https://hacs.xyz/docs/publish/start), [integrations](https://hacs.xyz/docs/publish/integration), [inclusion](https://hacs.xyz/docs/publish/include), [action](https://hacs.xyz/docs/publish/action)
 
 ## Licence

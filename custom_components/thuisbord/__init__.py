@@ -3,7 +3,8 @@
 Thuisbord is a household screen for energy and family. This integration is a bridge only: it
 sends readings to the household's own Thuisbord, with the household's connection key. It reads
 the sensors the household chose, or takes readings from the `thuisbord.send_reading` action. It
-never controls a device, a home battery included.
+also reads Thuisbord's battery charging advice and shows it as two entities. It never controls a
+device, a home battery included: acting on the advice is the household's own automation.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
+from .advice import BatteryAdviceCoordinator
 from .api import ThuisbordApi
 from .collector import SensorCollector
 from .const import (
@@ -37,7 +39,7 @@ from .const import (
 from .sender import ReadingSender
 from .services import async_setup_services
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -47,6 +49,7 @@ class ThuisbordData:
     """What a loaded entry keeps while it runs."""
 
     sender: ReadingSender
+    advice: BatteryAdviceCoordinator
     reads_sensors: bool
 
 
@@ -103,7 +106,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ThuisbordConfigEntry) ->
         )
         entry.async_on_unload(collector.async_start())
 
-    entry.runtime_data = ThuisbordData(sender=sender, reads_sensors=reads_sensors)
+    # The battery charging advice is only read and shown; nothing here acts on it. Like the key,
+    # it is not required at start-up: while Thuisbord cannot be reached its entities are
+    # unavailable, and a refused key starts the re-authentication flow.
+    advice = BatteryAdviceCoordinator(hass, entry, api)
+    await advice.async_refresh()
+
+    entry.runtime_data = ThuisbordData(sender=sender, advice=advice, reads_sensors=reads_sensors)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

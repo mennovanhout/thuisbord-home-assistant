@@ -329,6 +329,53 @@
       },
       "last_sent": {
         "name": "Last reading sent"
+      },
+      "battery_advice": {
+        "name": "Battery charging advice",
+        "state": {
+          "charge": "Charge",
+          "hold": "Hold",
+          "normal": "Normal"
+        },
+        "state_attributes": {
+          "recommend_charge": {
+            "name": "Recommend to charge"
+          },
+          "until": {
+            "name": "Until"
+          },
+          "price_now": {
+            "name": "Price now"
+          },
+          "break_even_price": {
+            "name": "Threshold price"
+          },
+          "reason": {
+            "name": "Reason",
+            "state": {
+              "cheap_now": "Cheap now",
+              "dearer_later": "Dearer later",
+              "no_gain": "No gain",
+              "no_battery": "No home battery",
+              "no_level": "No charge level",
+              "no_capacity": "No capacity",
+              "fixed_contract": "Fixed contract",
+              "contract_missing": "Contract missing",
+              "prices_unknown": "Prices unknown"
+            }
+          },
+          "computed_at": {
+            "name": "Worked out at"
+          },
+          "next_update_at": {
+            "name": "Next update"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "recommend_charge": {
+        "name": "Recommend to charge"
       }
     }
   },

@@ -19,8 +19,14 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ThuisbordConfigEntry
 ) -> dict[str, Any]:
     """Return the settings and what the sender is doing."""
+    advice = entry.runtime_data.advice.data
     return {
         "data": async_redact_data(dict(entry.data), TO_REDACT),
         "options": dict(entry.options),
         "sender": entry.runtime_data.sender.status.as_dict(),
+        "battery_advice": {
+            "available": entry.runtime_data.advice.last_update_success,
+            "state": None if advice is None else advice.state,
+            "reason": None if advice is None else advice.reason,
+        },
     }
